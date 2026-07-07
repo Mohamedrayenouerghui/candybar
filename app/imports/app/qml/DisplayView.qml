@@ -171,8 +171,8 @@ Item {
             wrapMode: Text.WordWrap
             maximumLineCount: 2
             text: DisplayState.categoryDisplayName.toUpperCase()
-            font.family: DisplayState.uiFont
-            font.pixelSize: Math.max(numPx * catScale, 20)
+            font.family: DisplayState.categoryFont || DisplayState.numberFont
+            font.pixelSize: Math.max(DisplayState.categoryFontSize || (numPx * catScale), 20)
             font.weight: Font.Bold
             font.letterSpacing: 1.5
             color: "#FFFFFF"
@@ -189,8 +189,8 @@ Item {
     component NowServingLabel: Text {
         Layout.alignment: Qt.AlignHCenter
         text: "NOW SERVING"
-        font.family: DisplayState.uiFont
-        font.pixelSize: Math.max(root.height * 0.021, 11)
+        font.family: DisplayState.nowServingFont || DisplayState.numberFont
+        font.pixelSize: Math.max(DisplayState.nowServingFontSize || Math.max(root.height * 0.021, 11), 10)
         font.letterSpacing: 5
         font.weight: Font.Bold
         color: root.text_primary
@@ -216,7 +216,7 @@ Item {
             anchors.centerIn: parent
             text: root._shownNumber
             font.family:       DisplayState.numberFont
-            font.pixelSize:    DisplayState.fontSize * root.numScale * layoutMult
+            font.pixelSize:    Math.max(DisplayState.numberFontSize || (DisplayState.fontSize * root.numScale * layoutMult), 12)
             font.weight:       Font.Black   // heaviest available weight
             font.letterSpacing: root.numLetterSpacing
             renderType:        Text.NativeRendering
@@ -405,6 +405,7 @@ Item {
                         height: DisplayState.logoSize
                         radius: root.radius_chip
                         color:  root.accent_gold_dim
+                        visible: DisplayState.logoVisible
                         Behavior on color { ColorAnimation { duration: root.dur_full } }
                         Image {
                             anchors { fill: parent; margins: Math.max(3, DisplayState.logoSize * 0.07) }
@@ -418,8 +419,8 @@ Item {
                     // Facility name — tertiary, fills remaining header space
                     Text {
                         text:            DisplayState.facilityName
-                        font.family:     DisplayState.uiFont
-                        font.pixelSize:  Math.max(root.height * 0.026, 13)
+                        font.family:     DisplayState.facilityFont || DisplayState.numberFont
+                        font.pixelSize:  Math.max(DisplayState.facilityFontSize || Math.max(root.height * 0.026, 13), 10)
                         font.weight:     Font.Light
                         color:           "#FFFFFF"
                         opacity:         0.55
@@ -520,8 +521,8 @@ Item {
                             height:            ticker_row_classic.height
                             verticalAlignment: Text.AlignVCenter
                             text:              "  ·  " + DisplayState.bannerText
-                            font.family:       DisplayState.uiFont
-                            font.pixelSize:    Math.max(root.height * 0.025, 12)
+                            font.family:       DisplayState.bannerFont || DisplayState.numberFont
+                            font.pixelSize:    Math.max(DisplayState.bannerFontSize || Math.max(root.height * 0.025, 12), 10)
                             font.weight:       Font.DemiBold
                             color:             root.text_primary
                             opacity:           0.9
@@ -586,6 +587,7 @@ Item {
                             height: DisplayState.logoSize
                             radius: root.radius_chip
                             color:  root.accent_gold_dim
+                            visible: DisplayState.logoVisible
                             Behavior on color { ColorAnimation { duration: root.dur_full } }
                             Image {
                                 anchors { fill: parent; margins: Math.max(3, DisplayState.logoSize * 0.07) }
@@ -762,6 +764,7 @@ Item {
                     height: DisplayState.logoSize * 1.25
                     radius: root.radius_card
                     color:  root.accent_gold_dim
+                    visible: DisplayState.logoVisible
                     Behavior on color { ColorAnimation { duration: root.dur_full } }
                     Image {
                         anchors { fill: parent; margins: Math.max(4, DisplayState.logoSize * 0.09) }
@@ -803,8 +806,8 @@ Item {
                 Text {
                     Layout.alignment: Qt.AlignHCenter
                     text:           DisplayState.facilityName
-                    font.family:    DisplayState.uiFont
-                    font.pixelSize: Math.max(root.height * 0.022, 10)
+                    font.family:    DisplayState.facilityFont || DisplayState.numberFont
+                    font.pixelSize: Math.max(DisplayState.facilityFontSize || Math.max(root.height * 0.022, 10), 10)
                     font.weight:    Font.Light
                     color:          root.text_primary
                     opacity:        0.35

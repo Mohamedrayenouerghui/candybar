@@ -113,3 +113,11 @@ class DisplayPersistence(QObject):
             return ls if 24 <= ls <= 120 else 48
         except (TypeError, ValueError):
             return 48
+
+    def get_text_size(self, key: str, default: int) -> int:
+        v = self.load(key, default)
+        try:
+            val = int(v)
+            return val if 8 <= val <= 240 else default
+        except (TypeError, ValueError):
+            return default

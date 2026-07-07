@@ -34,6 +34,7 @@ QtObject {
     property string backgroundOrientation: "portrait"
     property string logoPosition: "top-left"   // top-left | top-center | hidden
     property bool   bannerEnabled: true
+    property bool   logoVisible: true
 
     // ── design tokens ──────────────────────────────────────────────────
     property color  bgColor:      "#0b0d10"
@@ -47,8 +48,17 @@ QtObject {
     // ── typography ─────────────────────────────────────────────────────
     // fontSize: continuous 48–200px, set directly via slider — no preset enum
     property string numberFont: "DM Mono"
+    property string categoryFont: "DM Mono"
+    property string facilityFont: "DM Mono"
+    property string bannerFont: "DM Mono"
+    property string nowServingFont: "DM Mono"
     property string uiFont:     Qt.application.font.family
     property int    fontSize:   96
+    property int    numberFontSize: 96
+    property int    categoryFontSize: 34
+    property int    facilityFontSize: 24
+    property int    bannerFontSize: 24
+    property int    nowServingFontSize: 16
 
     // ── logo ────────────────────────────────────────────────────────────
     // logoSize: logo container height in px, 24–120, aspect ratio preserved
@@ -107,13 +117,23 @@ QtObject {
         categoryDisplayName   = p.load("categoryDisplayName", "Category A")
         logoPosition          = p.load("logoPosition", "top-left")
         bannerEnabled         = p.load("bannerEnabled", "true") !== "false"
+        logoVisible           = p.load("logoVisible", "true") !== "false"
         numberFont            = p.load("numberFont", "DM Mono")
+        categoryFont          = p.load("categoryFont", numberFont)
+        facilityFont          = p.load("facilityFont", numberFont)
+        bannerFont            = p.load("bannerFont", numberFont)
+        nowServingFont        = p.load("nowServingFont", numberFont)
         ttsLanguage           = p.load("ttsLanguage", "en")
         ttsEnabled            = p.load("ttsEnabled", "true") !== "false"
         audioMuted            = p.load("audioMuted", "false") === "true"
         audioVolumeStep       = parseInt(p.load("audioVolumeStep", "3")) || 3
         var fs                = parseInt(p.load("fontSize", "96"))
         fontSize              = (fs >= 48 && fs <= 200) ? fs : 96
+        numberFontSize        = parseInt(p.load("numberFontSize", fontSize)) || fontSize
+        categoryFontSize      = parseInt(p.load("categoryFontSize", 34)) || 34
+        facilityFontSize      = parseInt(p.load("facilityFontSize", 24)) || 24
+        bannerFontSize        = parseInt(p.load("bannerFontSize", 24)) || 24
+        nowServingFontSize    = parseInt(p.load("nowServingFontSize", 16)) || 16
         var ls                = parseInt(p.load("logoSize", "48"))
         logoSize              = (ls >= 24 && ls <= 120) ? ls : 48
         var lp                = p.logo_path()
@@ -157,13 +177,40 @@ QtObject {
             p.save("facilityName", value)
         } else if (key === "fontSize") {
             var fs = parseInt(value)
-            if (fs >= 48 && fs <= 200) { fontSize = fs; p.save("fontSize", fs) }
+            if (fs >= 48 && fs <= 200) { fontSize = fs; numberFontSize = fs; p.save("fontSize", fs); p.save("numberFontSize", fs) }
+        } else if (key === "numberFontSize") {
+            var nfs = parseInt(value)
+            if (nfs >= 8 && nfs <= 240) { numberFontSize = nfs; p.save("numberFontSize", nfs) }
+        } else if (key === "categoryFontSize") {
+            var cfs = parseInt(value)
+            if (cfs >= 8 && cfs <= 240) { categoryFontSize = cfs; p.save("categoryFontSize", cfs) }
+        } else if (key === "facilityFontSize") {
+            var ffs = parseInt(value)
+            if (ffs >= 8 && ffs <= 240) { facilityFontSize = ffs; p.save("facilityFontSize", ffs) }
+        } else if (key === "bannerFontSize") {
+            var bfs = parseInt(value)
+            if (bfs >= 8 && bfs <= 240) { bannerFontSize = bfs; p.save("bannerFontSize", bfs) }
+        } else if (key === "nowServingFontSize") {
+            var sfs = parseInt(value)
+            if (sfs >= 8 && sfs <= 240) { nowServingFontSize = sfs; p.save("nowServingFontSize", sfs) }
         } else if (key === "logoSize") {
             var ls = parseInt(value)
             if (ls >= 24 && ls <= 120) { logoSize = ls; p.save("logoSize", ls) }
         } else if (key === "numberFont") {
             numberFont = value
             p.save("numberFont", value)
+        } else if (key === "categoryFont") {
+            categoryFont = value
+            p.save("categoryFont", value)
+        } else if (key === "facilityFont") {
+            facilityFont = value
+            p.save("facilityFont", value)
+        } else if (key === "bannerFont") {
+            bannerFont = value
+            p.save("bannerFont", value)
+        } else if (key === "nowServingFont") {
+            nowServingFont = value
+            p.save("nowServingFont", value)
         } else if (key === "logoSource") {
             logoSource = value.startsWith("file://") ? value : "file://" + value
             p.save("logoPath", value.replace("file://", ""))
@@ -188,6 +235,9 @@ QtObject {
         } else if (key === "bannerEnabled") {
             bannerEnabled = value === "true" || value === true
             p.save("bannerEnabled", bannerEnabled ? "true" : "false")
+        } else if (key === "logoVisible") {
+            logoVisible = value === "true" || value === true
+            p.save("logoVisible", logoVisible ? "true" : "false")
         } else if (key === "ttsLanguage") {
             ttsLanguage = value
             p.save("ttsLanguage", value)

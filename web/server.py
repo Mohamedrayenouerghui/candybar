@@ -167,6 +167,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
             _display_persistence.set_pin(payload)
         elif key == "fontSize":
             _display_persistence.save("fontSize", int(payload))
+        elif key in ("numberFontSize", "categoryFontSize", "facilityFontSize", "bannerFontSize", "nowServingFontSize"):
+            _display_persistence.save(key, int(payload))
         elif key == "logoSize":
             _display_persistence.save("logoSize", int(payload))
         elif key == "audioVolumeStep":
@@ -292,9 +294,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
             "bannerEnabled":          p.load("bannerEnabled", "true"),
             "facilityName":           p.get_facility(),
             "fontSize":               p.get_font_size(),
+            "numberFontSize":         p.get_text_size("numberFontSize", p.get_font_size()),
+            "categoryFontSize":       p.get_text_size("categoryFontSize", 34),
+            "facilityFontSize":       p.get_text_size("facilityFontSize", 24),
+            "bannerFontSize":         p.get_text_size("bannerFontSize", 24),
+            "nowServingFontSize":     p.get_text_size("nowServingFontSize", 16),
             "logoSize":               p.get_logo_size(),
             "numberFont":             p.load("numberFont", "DM Mono"),
+            "categoryFont":           p.load("categoryFont", p.load("numberFont", "DM Mono")),
+            "facilityFont":           p.load("facilityFont", p.load("numberFont", "DM Mono")),
+            "bannerFont":             p.load("bannerFont", p.load("numberFont", "DM Mono")),
+            "nowServingFont":         p.load("nowServingFont", p.load("numberFont", "DM Mono")),
             "logoUrl":                logo_url,
+            "logoVisible":            p.load("logoVisible", "true"),
             "logoPosition":           p.load("logoPosition", "top-left"),
             "backgroundImage":        bg_url,
             "backgroundOrientation":  p.load("backgroundOrientation", "portrait"),

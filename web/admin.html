@@ -208,7 +208,7 @@
     <div class="prev-bg" id="prev_bg"></div>
     <div class="prev-overlay"></div>
     <div class="prev-body">
-      <div class="prev-label">NOW SERVING</div>
+      <div class="prev-label" id="prev_label">NOW SERVING</div>
       <div class="prev-cat" id="prev_cat">Category A</div>
       <div class="prev-num" id="prev_num" style="font-size:42px">001</div>
       <div class="prev-bar" id="prev_bar"></div>
@@ -409,6 +409,11 @@
           <option value="hidden">Hidden</option>
         </select>
       </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="lbl" style="margin:0">Logo Visibility</span>
+        <button id="logo_visible_btn" class="gi on" style="flex:none;padding:12px 22px"
+                onclick="toggleLogoVisibility()">Visible</button>
+      </div>
     </div>
 
     <!-- Font size slider -->
@@ -417,11 +422,78 @@
 
       <div class="slider-row">
         <div class="slider-header">
-          <span class="slider-lbl">Font size</span>
+          <span class="slider-lbl">Global number size</span>
           <span class="slider-val" id="fs_val">96px</span>
         </div>
         <input type="range" id="fs_slider" min="48" max="200" step="1" value="96"
                oninput="onFsSlider(this.value)"/>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-lbl">Number size</span>
+          <span class="slider-val" id="num_fs_val">96px</span>
+        </div>
+        <input type="range" id="num_fs_slider" min="8" max="240" step="1" value="96"
+               oninput="onTextSizeSlider('numberFontSize', this.value, 'num_fs_val', 'prev_num', 'fontSize')"/>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-lbl">Category size</span>
+          <span class="slider-val" id="cat_fs_val">34px</span>
+        </div>
+        <input type="range" id="cat_fs_slider" min="8" max="240" step="1" value="34"
+               oninput="onTextSizeSlider('categoryFontSize', this.value, 'cat_fs_val', 'prev_cat', 'fontSize')"/>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-lbl">Facility size</span>
+          <span class="slider-val" id="fac_fs_val">24px</span>
+        </div>
+        <input type="range" id="fac_fs_slider" min="8" max="240" step="1" value="24"
+               oninput="onTextSizeSlider('facilityFontSize', this.value, 'fac_fs_val', 'prev_fac', 'fontSize')"/>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-lbl">Banner size</span>
+          <span class="slider-val" id="banner_fs_val">24px</span>
+        </div>
+        <input type="range" id="banner_fs_slider" min="8" max="240" step="1" value="24"
+               oninput="onTextSizeSlider('bannerFontSize', this.value, 'banner_fs_val', 'prev_fac', 'fontSize')"/>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-lbl">Now serving size</span>
+          <span class="slider-val" id="serve_fs_val">16px</span>
+        </div>
+        <input type="range" id="serve_fs_slider" min="8" max="240" step="1" value="16"
+               oninput="onTextSizeSlider('nowServingFontSize', this.value, 'serve_fs_val', 'prev_label', 'fontSize')"/>
+      </div>
+
+      <div class="lbl" style="margin-top:4px;margin-bottom:4px">Font families</div>
+      <div class="slider-row">
+        <div class="slider-header"><span class="slider-lbl">Number font</span></div>
+        <select id="number_font_select" onchange="setFontFor('numberFont', this.value)"></select>
+      </div>
+      <div class="slider-row">
+        <div class="slider-header"><span class="slider-lbl">Category font</span></div>
+        <select id="category_font_select" onchange="setFontFor('categoryFont', this.value)"></select>
+      </div>
+      <div class="slider-row">
+        <div class="slider-header"><span class="slider-lbl">Facility font</span></div>
+        <select id="facility_font_select" onchange="setFontFor('facilityFont', this.value)"></select>
+      </div>
+      <div class="slider-row">
+        <div class="slider-header"><span class="slider-lbl">Banner font</span></div>
+        <select id="banner_font_select" onchange="setFontFor('bannerFont', this.value)"></select>
+      </div>
+      <div class="slider-row">
+        <div class="slider-header"><span class="slider-lbl">Now serving font</span></div>
+        <select id="nowserving_font_select" onchange="setFontFor('nowServingFont', this.value)"></select>
       </div>
 
       <!-- Logo size slider -->
@@ -434,7 +506,7 @@
                oninput="onLsSlider(this.value)"/>
       </div>
 
-      <div class="lbl" style="margin-top:4px;margin-bottom:4px">Number font</div>
+      <div class="lbl" style="margin-top:4px;margin-bottom:4px">Number font preset</div>
       <div id="font_list">
         <div class="font-item">
           <span style="font-size:13px">Default — DM Mono</span>
@@ -480,6 +552,7 @@ let muted = false, volStep = 3, ttsOn = true, bannerOn = true;
 let gradOn = false, currentHue = 30, currentSat = 100, currentVal = 100;
 let isDragging = false, pickerCanvas, pickerCtx;
 let _confirmT;
+let logoVisible = true;
 // Pending slider values — only sent on Apply press
 let _pendingFs = null, _pendingLs = null;
 // Current display values (from /api/state)
@@ -536,6 +609,17 @@ function onLsSlider(v) {
   _pendingLs = parseInt(v);
   document.getElementById('ls_val').textContent = v + 'px';
   // Live preview: nothing visible for logo size in mini preview — value shown is enough
+}
+function onTextSizeSlider(key, value, labelId, previewId, previewProp) {
+  const v = Math.max(8, Math.min(240, parseInt(value) || 8));
+  const label = document.getElementById(labelId);
+  if (label) label.textContent = v + 'px';
+  const el = document.getElementById(previewId);
+  if (el) {
+    if (previewProp === 'fontSize') el.style.fontSize = v + 'px';
+    if (previewProp === 'fontFamily') el.style.fontFamily = v;
+  }
+  pub(key, String(v));
 }
 
 /* ════════════════════════════════════════════════════════
@@ -684,6 +768,13 @@ function toggleBanner() {
   btn.classList.toggle('on', bannerOn);
   pub('bannerEnabled', bannerOn ? 'true' : 'false');
 }
+function toggleLogoVisibility() {
+  logoVisible = !logoVisible;
+  const btn = document.getElementById('logo_visible_btn');
+  btn.textContent = logoVisible ? 'Visible' : 'Hidden';
+  btn.classList.toggle('on', logoVisible);
+  pub('logoVisible', logoVisible ? 'true' : 'false');
+}
 function toggleGrad() {
   gradOn = !gradOn;
   const btn = document.getElementById('grad_btn');
@@ -691,14 +782,23 @@ function toggleGrad() {
   btn.classList.toggle('on', gradOn);
   pub('accentGradientEnabled', gradOn ? 'true' : 'false');
 }
-function setFont(f) {
-  pub('numberFont', f);
-  // update preview immediately
-  try {
-    document.getElementById('prev_num').style.fontFamily = f;
-    document.getElementById('prev_cat').style.fontFamily = f;
-  } catch(e) {}
+function setFontFor(key, family) {
+  if (!family) return;
+  pub(key, family);
+  const previewMap = {
+    numberFont: ['prev_num', 'prev_cat'],
+    categoryFont: ['prev_cat'],
+    facilityFont: ['prev_fac'],
+    bannerFont: ['prev_fac'],
+    nowServingFont: ['prev_label']
+  };
+  (previewMap[key] || []).forEach(id => {
+    try { document.getElementById(id).style.fontFamily = family; } catch(e) {}
+  });
   showConfirm();
+}
+function setFont(f) {
+  setFontFor('numberFont', f);
 }
 
 /* ════════════════════════════════════════════════════════
@@ -915,6 +1015,31 @@ async function uploadFont(input) {
     if (d.ok) { await loadFonts(); showConfirm(); }
   } catch(e) {}
 }
+function populateFontSelect(id, currentValue) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  const base = ['DM Mono', 'monospace', 'sans-serif', 'serif'];
+  const current = currentValue || 'DM Mono';
+  const options = [...new Set([current, ...base])];
+  sel.innerHTML = '';
+  options.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f;
+    opt.textContent = f;
+    if (f === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+function refreshFontSelectors(values = {}) {
+  const mapping = {
+    number_font_select: values.numberFont || 'DM Mono',
+    category_font_select: values.categoryFont || values.numberFont || 'DM Mono',
+    facility_font_select: values.facilityFont || values.numberFont || 'DM Mono',
+    banner_font_select: values.bannerFont || values.numberFont || 'DM Mono',
+    nowserving_font_select: values.nowServingFont || values.numberFont || 'DM Mono'
+  };
+  Object.entries(mapping).forEach(([id, val]) => populateFontSelect(id, val));
+}
 async function loadFonts() {
   try {
     const r = await fetch('/api/fonts');
@@ -922,18 +1047,37 @@ async function loadFonts() {
     if (!d.ok) return;
     const container = document.getElementById('font_list');
     const extras = d.fonts || [];
+    const currentValues = {
+      numberFont: document.getElementById('number_font_select')?.value || 'DM Mono',
+      categoryFont: document.getElementById('category_font_select')?.value || 'DM Mono',
+      facilityFont: document.getElementById('facility_font_select')?.value || 'DM Mono',
+      bannerFont: document.getElementById('banner_font_select')?.value || 'DM Mono',
+      nowServingFont: document.getElementById('nowserving_font_select')?.value || 'DM Mono'
+    };
     document.getElementById('dyn_fonts').textContent =
       extras.map(f=>`@font-face{font-family:'${f.family}';src:url('${f.url}')}`).join('\n');
     container.querySelectorAll('.custom-font-item').forEach(el=>el.remove());
-    if (extras.length === 0) return;
+    refreshFontSelectors(currentValues);
     extras.forEach(f => {
+      const selIds = ['number_font_select','category_font_select','facility_font_select','banner_font_select','nowserving_font_select'];
+      selIds.forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const exists = Array.from(sel.options).some(o => o.value === f.family);
+        if (!exists) {
+          const opt = document.createElement('option');
+          opt.value = f.family;
+          opt.textContent = f.family;
+          sel.appendChild(opt);
+        }
+      });
       const div = document.createElement('div');
       div.className = 'font-item custom-font-item';
       div.innerHTML = `
         <span style="font-size:13px">${f.family}</span>
         <span style="font-family:'${f.family}';font-size:14px;color:var(--t1)">042</span>
         <button class="gi" style="flex:none;padding:8px 14px;font-size:11px"
-          onclick="setFont('${f.family}')">Use</button>`;
+          onclick="setFontFor('numberFont', '${f.family}')">Use</button>`;
       container.appendChild(div);
     });
   } catch(e) {}
@@ -1018,6 +1162,12 @@ async function init() {
       document.getElementById('logo_hint').textContent = '📁 No logo uploaded — tap to add one';
     }
     if (d.logoPosition) document.getElementById('logo_pos').value = d.logoPosition;
+    logoVisible = d.logoVisible !== 'false' && d.logoVisible !== false;
+    const logoBtn = document.getElementById('logo_visible_btn');
+    if (logoBtn) {
+      logoBtn.textContent = logoVisible ? 'Visible' : 'Hidden';
+      logoBtn.classList.toggle('on', logoVisible);
+    }
 
     // Audio state
     muted   = d.audioMuted==='true'||d.audioMuted===true;
@@ -1048,11 +1198,37 @@ async function init() {
     document.getElementById('fs_slider').value       = _curFs;
     document.getElementById('fs_val').textContent    = _curFs+'px';
     document.getElementById('prev_num').style.fontSize = Math.round(42*(_curFs/96))+'px';
-    // Apply font family to preview (number and category)
+    const numberSize = parseInt(d.numberFontSize)||_curFs;
+    document.getElementById('num_fs_slider').value = numberSize;
+    document.getElementById('num_fs_val').textContent = numberSize+'px';
+    const categorySize = parseInt(d.categoryFontSize)||34;
+    document.getElementById('cat_fs_slider').value = categorySize;
+    document.getElementById('cat_fs_val').textContent = categorySize+'px';
+    const facilitySize = parseInt(d.facilityFontSize)||24;
+    document.getElementById('fac_fs_slider').value = facilitySize;
+    document.getElementById('fac_fs_val').textContent = facilitySize+'px';
+    const bannerSize = parseInt(d.bannerFontSize)||24;
+    document.getElementById('banner_fs_slider').value = bannerSize;
+    document.getElementById('banner_fs_val').textContent = bannerSize+'px';
+    const serveSize = parseInt(d.nowServingFontSize)||16;
+    document.getElementById('serve_fs_slider').value = serveSize;
+    document.getElementById('serve_fs_val').textContent = serveSize+'px';
+    // Apply font family to preview
     if (d.numberFont) {
       document.getElementById('prev_num').style.fontFamily = d.numberFont;
       document.getElementById('prev_cat').style.fontFamily = d.numberFont;
     }
+    if (d.categoryFont) document.getElementById('prev_cat').style.fontFamily = d.categoryFont;
+    if (d.facilityFont) document.getElementById('prev_fac').style.fontFamily = d.facilityFont;
+    if (d.bannerFont) document.getElementById('prev_fac').style.fontFamily = d.bannerFont;
+    if (d.nowServingFont) document.getElementById('prev_label').style.fontFamily = d.nowServingFont;
+    refreshFontSelectors({
+      numberFont: d.numberFont || 'DM Mono',
+      categoryFont: d.categoryFont || d.numberFont || 'DM Mono',
+      facilityFont: d.facilityFont || d.numberFont || 'DM Mono',
+      bannerFont: d.bannerFont || d.numberFont || 'DM Mono',
+      nowServingFont: d.nowServingFont || d.numberFont || 'DM Mono'
+    });
 
     // Logo size slider — init from persisted value
     _curLs = parseInt(d.logoSize)||48;
