@@ -1,0 +1,40 @@
+<RCC>
+    <qresource prefix="/">
+        <!-- Root QML -->
+        <file>app/qml/App.qml</file>
+        <file>app/qml/MainDisplay.qml</file>
+        <file>app/qml/DisplayView.qml</file>
+        <file>app/qml/WelcomeSplash.qml</file>
+        <file>app/qml/ConnectionBanner.qml</file>
+        <file>app/qml/CustomerSiteQrOverlay.qml</file>
+
+        <!-- Global singleton -->
+        <file>app/qml/global/DisplayState.qml</file>
+        <file>app/qml/global/qmldir</file>
+
+        <!-- Assets -->
+        <file>app/res/image/genical.jpg</file>
+        <file>app/res/image/favicon.ico</file>
+        <file>app/res/image/noise_texture.png</file>
+        <file>app/res/image/0.jpg</file>
+
+        <!-- Backgrounds — Professional -->
+        <file>app/res/image/pro_abstract.jpg</file>
+        <file>app/res/image/pro_geometric.jpg</file>
+        <file>app/res/image/pro_orange_gradient.jpg</file>
+        <file>app/res/image/pro_purple_waves.jpg</file>
+        <file>app/res/image/pro_blue_gradient.jpg</file>
+        <file>app/res/image/pro_pink_gradient.jpg</file>
+
+        <!-- Backgrounds — Fast Food -->
+        <file>app/res/image/ff_red_checker.jpg</file>
+        <file>app/res/image/ff_orange_organic.jpg</file>
+        <file>app/res/image/ff_green_leaves.jpg</file>
+        <file>app/res/image/ff_red_waves.jpg</file>
+        <file>app/res/image/ff_burger_pattern.jpg</file>
+
+        <!-- Fonts: DM Mono for tabular number display -->
+        <file>app/res/font/DMMono-Regular.otf</file>
+        <file>app/res/font/DMMono-Medium.otf</file>
+    </qresource>
+</RCC>

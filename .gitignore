@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Virtual environment
+venv/
+
+# Build outputs
+build/
+dist/
+source.zip
+source_all.zip
+
+# Qt generated files (rebuilt by scripts/update_resources.py)
+resource_rc.py
+*.qm
+
+# IDE
+.idea/
+.vscode/
+
+# User-uploaded and runtime-generated assets (device-local, not committed)
+audio/
+uploads/
+fonts/
+
+# Previously used reference folder (protect against re-adding)
+candybar_refs/
+
+# Logs
+*.log
+log/

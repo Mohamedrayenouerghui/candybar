@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <title>CandyBar Admin</title>
+  <link rel="icon" href="/favicon.ico"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0b0d10; --s1:rgba(255,255,255,.05); --s2:rgba(255,255,255,.09);
+      --bd:rgba(255,255,255,.11); --acc:#FFB84D;
+      --t1:rgba(255,255,255,.95); --t2:rgba(255,255,255,.52); --t3:rgba(255,255,255,.28);
+      --r:12px; --rc:10px; --fast:100ms; --std:240ms;
+    }
+    html,body{min-height:100%;background:var(--bg);color:var(--t1);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:15px}
+    body::before{content:"";position:fixed;inset:0;
+      background:url('/uploads/noise_texture.png') repeat;opacity:.012;pointer-events:none;z-index:0}
+    #app{position:relative;z-index:1;max-width:600px;margin:0 auto;
+      padding:16px 16px 100px;display:flex;flex-direction:column;gap:14px}
+    /* ── header ── */
+    .hdr{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
+    .hdr h1{font-size:17px;font-weight:700;letter-spacing:-.01em}
+    .conn{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t2)}
+    .dot{width:7px;height:7px;border-radius:50%;background:#555;transition:background .3s}
+    .dot.on{background:#22c55e} .dot.off{background:#ef4444}
+    /* ── tabs ── */
+    .tabs{display:flex;background:var(--s1);border:1px solid var(--bd);
+      border-radius:var(--r);padding:5px;gap:4px}
+    .tab{flex:1;background:transparent;border:none;color:var(--t3);padding:11px 0;
+      font-size:13px;font-weight:700;border-radius:var(--rc);cursor:pointer;
+      transition:background var(--fast),color var(--fast),transform var(--fast),
+      box-shadow var(--fast)}
+    .tab:active{transform:scale(.94);opacity:.70}
+    /* Active tab: high contrast — impossible to miss which tab you're on */
+    .tab.on{background:var(--acc);color:#000;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+    .pane{display:flex;flex-direction:column;gap:14px}
+    .pane.hide{display:none!important}
+    /* ── card ── */
+    .card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);
+      padding:16px;display:flex;flex-direction:column;gap:12px}
+    .lbl{font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+      color:var(--t3);font-weight:700;margin-bottom:2px}
+    /* ── preview miniature ── */
+    .prev-wrap{border-radius:var(--r);overflow:hidden;aspect-ratio:16/9;
+      background:#000;border:1px solid var(--bd);position:relative}
+    .prev-bg{position:absolute;inset:0;background-size:cover;background-position:center;
+      transition:background-image .4s}
+    .prev-overlay{position:absolute;inset:0;background:rgba(0,0,0,.30)}
+    .prev-body{position:absolute;inset:0;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:2px}
+    .prev-label{font-size:7px;letter-spacing:.12em;text-transform:uppercase;
+      color:rgba(255,255,255,.30)}
+    .prev-cat{font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--acc);
+      text-transform:uppercase}
+    .prev-num{font-family:monospace;font-weight:900;color:#fff;line-height:1;
+      letter-spacing:-.04em;transition:font-size .15s}
+    .prev-bar{height:3px;width:56px;border-radius:2px;background:var(--acc)}
+    .prev-fac{font-size:7px;color:rgba(255,255,255,.22);margin-top:3px}
+    /* ── stepper — 56px min tap target ── */
+    .stepper{display:flex;border-radius:var(--rc);overflow:hidden;border:1px solid var(--bd)}
+    .step-btn{flex:0 0 64px;height:64px;background:var(--s1);border:none;font-size:30px;
+      color:var(--t1);cursor:pointer;
+      transition:background var(--fast),transform var(--fast),opacity var(--fast)}
+    .step-btn:active{transform:scale(.94);opacity:.70;background:var(--s2)}
+    .step-num{flex:1;height:64px;background:var(--s2);font-family:monospace;font-size:26px;
+      font-weight:600;color:var(--t1);border:none;text-align:center;outline:none}
+    /* ── btn group ── */
+    .grp{display:flex;gap:6px}
+    .gi{flex:1;padding:12px 0;background:var(--s1);border:1px solid var(--bd);
+      border-radius:var(--rc);color:var(--t2);cursor:pointer;font-size:12px;font-weight:600;
+      text-align:center;
+      transition:border-color var(--fast),color var(--fast),background var(--fast),
+      transform var(--fast),opacity var(--fast)}
+    .gi:active{transform:scale(.94);opacity:.70}
+    .gi.on{border-color:var(--acc);color:var(--t1);background:var(--s2)}
+    /* ── inputs ── */
+    input[type=text],input[type=password],textarea,select{
+      width:100%;background:var(--s1);border:1px solid var(--bd);border-radius:var(--rc);
+      color:var(--t1);padding:11px 13px;font-size:14px;font-family:inherit;outline:none;
+      transition:border-color .2s}
+    input:focus,textarea:focus,select:focus{border-color:var(--acc)}
+    textarea{resize:vertical;min-height:60px}
+    /* ── slider — touch-friendly ── */
+    .slider-row{display:flex;flex-direction:column;gap:6px}
+    .slider-header{display:flex;justify-content:space-between;align-items:baseline}
+    .slider-lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+      color:var(--t3);font-weight:700}
+    .slider-val{font-size:14px;font-weight:700;color:var(--acc);font-family:monospace}
+    input[type=range]{
+      -webkit-appearance:none;appearance:none;width:100%;height:28px;
+      background:transparent;cursor:pointer;padding:0}
+    input[type=range]::-webkit-slider-runnable-track{
+      height:6px;border-radius:3px;background:var(--s2);border:1px solid var(--bd)}
+    input[type=range]::-webkit-slider-thumb{
+      -webkit-appearance:none;width:28px;height:28px;border-radius:50%;
+      background:var(--acc);margin-top:-11px;border:2px solid rgba(0,0,0,.3);
+      box-shadow:0 2px 8px rgba(0,0,0,.4)}
+    input[type=range]::-moz-range-track{
+      height:6px;border-radius:3px;background:var(--s2);border:1px solid var(--bd)}
+    input[type=range]::-moz-range-thumb{
+      width:28px;height:28px;border-radius:50%;background:var(--acc);
+      border:2px solid rgba(0,0,0,.3);box-shadow:0 2px 8px rgba(0,0,0,.4)}
+    /* ── sticky apply bar ── */
+    .sticky-apply{position:fixed;bottom:0;left:0;right:0;z-index:100;
+      background:rgba(11,13,16,.92);backdrop-filter:blur(12px);
+      border-top:1px solid var(--bd);padding:12px 16px;
+      display:flex;gap:10px;align-items:center;max-width:600px;margin:0 auto}
+    /* sticky-apply is centred: need to fix left/right relative to viewport */
+    @media(min-width:632px){
+      .sticky-apply{left:50%;right:auto;transform:translateX(-50%);width:600px;border-radius:var(--r) var(--r) 0 0}
+    }
+    .apply{flex:1;padding:15px;border:none;border-radius:var(--rc);
+      background:var(--acc);color:#000;font-size:15px;font-weight:800;cursor:pointer;
+      transition:transform var(--fast),opacity var(--fast)}
+    .apply:active{transform:scale(.94);opacity:.70}
+    .apply-confirm{flex:none;font-size:13px;font-weight:700;color:#22c55e;
+      opacity:0;transition:opacity .3s;white-space:nowrap}
+    .apply-confirm.show{opacity:1}
+    /* ── template grid ── */
+    .tpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .tpl-card{border-radius:var(--rc);overflow:hidden;cursor:pointer;position:relative;
+      aspect-ratio:16/9;border:2px solid transparent;
+      transition:border-color .2s,transform var(--fast),box-shadow .2s}
+    .tpl-card:active{transform:scale(.94);opacity:.70}
+    .tpl-card.on{border-color:var(--acc)}
+    .tpl-bg{position:absolute;inset:0;background-size:cover;background-position:center}
+    .tpl-overlay{position:absolute;inset:0;background:rgba(0,0,0,.42)}
+    .tpl-body{position:absolute;inset:0;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:3px;pointer-events:none}
+    .tpl-num{font-family:monospace;font-size:24px;font-weight:900;line-height:1}
+    .tpl-name{font-size:11px;font-weight:700;color:#fff}
+    /* ── bg grid ── */
+    .bg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .bg-btn{border:2px solid var(--bd);border-radius:var(--rc);overflow:hidden;
+      cursor:pointer;aspect-ratio:1;background:#111;position:relative;padding:0;
+      transition:border-color .2s,transform var(--fast),opacity var(--fast)}
+    .bg-btn:active{transform:scale(.93);opacity:.70}
+    .bg-btn.on{border-color:var(--acc)}
+    .bg-btn img{width:100%;height:100%;object-fit:cover;display:block}
+    .bg-label{position:absolute;bottom:0;left:0;right:0;font-size:8px;
+      color:rgba(255,255,255,.85);background:rgba(0,0,0,.5);
+      padding:3px 0;text-align:center}
+    /* ── layout thumbs ── */
+    .lay-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .lay-thumb{border:2px solid var(--bd);border-radius:var(--rc);padding:8px 4px 6px;
+      cursor:pointer;text-align:center;background:var(--s1);
+      transition:border-color var(--std),transform var(--fast),background var(--std),
+      opacity var(--fast)}
+    .lay-thumb:active{transform:scale(.94);opacity:.70}
+    .lay-thumb.on{border-color:var(--acc);background:var(--s2)}
+    .lay-thumb svg{display:block;margin:0 auto 4px}
+    .lay-thumb span{font-size:11px;color:var(--t2)}
+    .lay-thumb.on span{color:var(--t1)}
+    /* ── color picker ── */
+    #color_canvas{width:100%;height:140px;border-radius:var(--rc);
+      border:1px solid var(--bd);cursor:crosshair;display:block}
+    .hue-range{width:100%;height:12px;border-radius:6px;appearance:none;
+      -webkit-appearance:none;outline:none;
+      background:linear-gradient(to right,red,#ff0,lime,cyan,blue,#f0f,red);margin:6px 0}
+    .hue-range::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
+      border-radius:50%;background:#fff;border:2px solid #000;cursor:pointer}
+    .hue-range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;
+      background:#fff;border:2px solid #000;cursor:pointer}
+    /* ── upload area ── */
+    .upload{border:1px dashed var(--bd);border-radius:var(--rc);padding:18px;
+      text-align:center;cursor:pointer;transition:border-color .2s,opacity var(--fast);
+      display:flex;flex-direction:column;align-items:center;gap:6px}
+    .upload:active{opacity:.70}
+    .upload:hover{border-color:var(--acc)}
+    .upload img{max-height:56px;max-width:100%;border-radius:6px;object-fit:contain}
+    .upload-hint{font-size:11px;color:var(--t3)}
+    /* empty-state prompt */
+    .empty-prompt{font-size:12px;color:var(--t3);text-align:center;
+      padding:10px 0;font-style:italic}
+    /* ── section sep ── */
+    .sep{font-size:10px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;
+      font-weight:700;margin:4px 0 0}
+    /* ── stats ── */
+    .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .stat{background:var(--s2);border-radius:var(--rc);padding:10px 12px}
+    .stat-l{font-size:10px;color:var(--t3);margin-bottom:2px;letter-spacing:.06em}
+    .stat-v{font-size:15px;font-weight:600;font-family:monospace}
+    /* ── font item ── */
+    .font-item{display:flex;align-items:center;justify-content:space-between;gap:8px;
+      padding:10px 12px;background:var(--s2);border:1px solid var(--bd);
+      border-radius:var(--rc);margin-bottom:6px}
+    /* ── bg category switch ── */
+    .bg-tabs{display:flex;gap:6px;background:var(--s2);border-radius:var(--rc);padding:4px}
+    .bg-tab{flex:1;padding:9px 0;border:none;border-radius:var(--rc);font-size:13px;
+      font-weight:600;cursor:pointer;transition:background .15s,color .15s,
+      transform var(--fast),opacity var(--fast);background:transparent;color:var(--t2)}
+    .bg-tab:active{transform:scale(.94);opacity:.70}
+    .bg-tab.on{background:var(--acc);color:#000}
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- header -->
+  <div class="hdr">
+    <h1>CandyBar Display</h1>
+    <div class="conn"><div class="dot off" id="dot"></div><span id="conn_lbl">HTTP only</span></div>
+  </div>
+
+  <!-- live preview miniature -->
+  <div class="prev-wrap">
+    <div class="prev-bg" id="prev_bg"></div>
+    <div class="prev-overlay"></div>
+    <div class="prev-body">
+      <div class="prev-label">NOW SERVING</div>
+      <div class="prev-cat" id="prev_cat">Category A</div>
+      <div class="prev-num" id="prev_num" style="font-size:42px">001</div>
+      <div class="prev-bar" id="prev_bar"></div>
+      <div class="prev-fac" id="prev_fac"></div>
+    </div>
+  </div>
+
+  <!-- tabs — active one is visually unmistakable (gold background, black text) -->
+  <div class="tabs">
+    <button class="tab on" id="t_remote"   onclick="tab('remote')">🎛 Remote</button>
+    <button class="tab"    id="t_settings" onclick="tab('settings')">⚙ Settings</button>
+    <button class="tab"    id="t_theme"    onclick="tab('theme')">🎨 Theme</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       REMOTE TAB
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="pane" id="p_remote">
+    <div class="card">
+      <div class="lbl">Queue Number</div>
+      <!-- 64px tap targets — easy to hit dozens of times per shift -->
+      <div class="stepper">
+        <button class="step-btn" onclick="adj(-1)">−</button>
+        <input class="step-num" id="num_input" type="number" min="0" max="999"
+               value="1" oninput="prevNum()"/>
+        <button class="step-btn" onclick="adj(1)">＋</button>
+      </div>
+      <div style="font-size:13px;color:var(--t2);text-align:center;font-weight:500">
+        Category: <span id="rc_code">A</span> — <span id="rc_name">Category A</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="lbl">Audio</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:14px;font-weight:500">Mute</span>
+        <button id="mute_btn" class="gi" style="flex:none;padding:12px 28px"
+                onclick="toggleMute()">Unmuted</button>
+      </div>
+      <div class="lbl" style="margin-bottom:6px">Volume</div>
+      <div class="grp" id="vol_grp">
+        <input id="vol_slider" type="range" min="0" max="100" value="75"
+               oninput="onVolSlider(this.value)" style="width:100%" />
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <div style="font-size:13px;color:var(--t2)">Level</div>
+          <div id="vol_label" style="font-weight:600">75%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- ══════════════════════════════════════════════════════════════
+       SETTINGS TAB
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="pane hide" id="p_settings">
+    <div class="card" style="gap:10px">
+      <div class="lbl">Category</div>
+      <input type="text" id="cat_id"   placeholder="A"         maxlength="10"/>
+      <input type="text" id="cat_name" placeholder="Category A"/>
+      <button class="apply" style="position:static" onclick="saveCategory()">Save Category</button>
+    </div>
+    <div class="card" style="gap:10px">
+      <div class="lbl">General</div>
+      <input type="text" id="facility" placeholder="Facility name"/>
+      <textarea id="banner" rows="2" placeholder="Banner message…"></textarea>
+      <button class="apply" style="position:static" onclick="saveGeneral()">Save</button>
+    </div>
+    <div class="card" style="gap:10px">
+      <div class="lbl">Text-to-Speech</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:14px;font-weight:500">Speech Announcements</span>
+        <button id="tts_btn" class="gi on" style="flex:none;padding:12px 28px"
+                onclick="toggleTts()">Enabled</button>
+      </div>
+      <select id="tts_lang" onchange="pub('ttsLanguage',this.value)">
+        <option value="en">English</option>
+        <option value="fr">French</option>
+        <option value="ar">Arabic</option>
+      </select>
+    </div>
+    <div class="card" style="gap:10px">
+      <div class="lbl">Change PIN</div>
+      <div style="display:flex;gap:8px">
+        <input type="password" id="new_pin" placeholder="New 4-digit PIN"
+               maxlength="4" inputmode="numeric" style="flex:1"/>
+        <button class="gi" style="flex:none;padding:14px 18px" onclick="changePin()">Save</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="lbl">Device Status</div>
+      <div class="stats">
+        <div class="stat"><div class="stat-l">Uptime</div>
+          <div class="stat-v" id="s_up">—</div></div>
+        <div class="stat"><div class="stat-l">Sessions</div>
+          <div class="stat-v" id="s_sess">—</div></div>
+        <div class="stat"><div class="stat-l">Number Changes</div>
+          <div class="stat-v" id="s_chg">—</div></div>
+        <div class="stat"><div class="stat-l">Last Restart</div>
+          <div class="stat-v" id="s_rst">—</div></div>
+      </div>
+    </div>
+  </div>
+  <!-- ══════════════════════════════════════════════════════════════
+       THEME TAB
+  ══════════════════════════════════════════════════════════════ -->
+  <div class="pane hide" id="p_theme">
+
+    <!-- Templates -->
+    <div class="card">
+      <div class="lbl">Ready-made Templates</div>
+      <div class="sep" style="margin-bottom:8px">🍔 Fast Food</div>
+      <div class="tpl-grid" id="tpl_ff"></div>
+      <div class="sep" style="margin:10px 0 8px">💼 Professional</div>
+      <div class="tpl-grid" id="tpl_pro"></div>
+    </div>
+
+    <!-- Layout -->
+    <div class="card">
+      <div class="lbl">Display Layout</div>
+      <div class="lay-grid">
+        <div class="lay-thumb on" id="lay_Classic" onclick="setLayout('Classic')">
+          <svg width="48" height="30" viewBox="0 0 48 30" fill="none">
+            <rect width="48" height="30" rx="3" fill="rgba(255,255,255,.05)"/>
+            <rect x="4" y="4" width="40" height="5" rx="2" fill="rgba(255,255,255,.18)"/>
+            <rect x="14" y="11" width="20" height="10" rx="2" fill="rgba(255,255,255,.30)"/>
+            <rect x="4" y="23" width="40" height="4" rx="2" fill="rgba(255,255,255,.12)"/>
+          </svg><span>Classic</span>
+        </div>
+        <div class="lay-thumb" id="lay_Split" onclick="setLayout('Split')">
+          <svg width="48" height="30" viewBox="0 0 48 30" fill="none">
+            <rect width="48" height="30" rx="3" fill="rgba(255,255,255,.05)"/>
+            <rect x="0" y="0" width="27" height="30" rx="3" fill="rgba(255,255,255,.10)"/>
+            <rect x="8" y="10" width="12" height="10" rx="2" fill="rgba(255,255,255,.35)"/>
+            <rect x="30" y="6" width="13" height="3" rx="1" fill="rgba(255,255,255,.20)"/>
+            <rect x="30" y="11" width="10" height="3" rx="1" fill="rgba(255,255,255,.14)"/>
+            <rect x="30" y="16" width="8" height="3" rx="1" fill="rgba(255,255,255,.09)"/>
+          </svg><span>Split</span>
+        </div>
+        <div class="lay-thumb" id="lay_Centered" onclick="setLayout('Centered')">
+          <svg width="48" height="30" viewBox="0 0 48 30" fill="none">
+            <rect width="48" height="30" rx="3" fill="rgba(255,255,255,.05)"/>
+            <rect x="20" y="3" width="8" height="8" rx="2" fill="rgba(255,255,255,.18)"/>
+            <rect x="10" y="13" width="28" height="10" rx="2" fill="rgba(255,255,255,.30)"/>
+            <rect x="16" y="25" width="16" height="3" rx="1" fill="rgba(255,255,255,.14)"/>
+          </svg><span>Centered</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accent color -->
+    <div class="card" style="gap:10px">
+      <div class="lbl">Accent Color</div>
+      <canvas id="color_canvas" width="300" height="140"></canvas>
+      <input type="range" class="hue-range" id="hue_slider" min="0" max="360"
+             value="30" oninput="updateHue(this.value)"/>
+      <input type="text" id="color_hex" placeholder="#FFB84D" maxlength="7"
+             oninput="updateHex(this.value)"/>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:14px;font-weight:500">Gradient on accent bar</span>
+        <button id="grad_btn" class="gi" style="flex:none;padding:12px 24px"
+                onclick="toggleGrad()">Off</button>
+      </div>
+    </div>
+
+    <!-- Background -->
+    <div class="card" style="gap:10px">
+      <div class="lbl">Background</div>
+      <div class="bg-tabs">
+        <button class="bg-tab on" id="bg_t_pro" onclick="bgTab('pro')">💼 Professional</button>
+        <button class="bg-tab"    id="bg_t_ff"  onclick="bgTab('ff')">🍔 Fast Food</button>
+      </div>
+      <div class="bg-grid" id="bg_grid_pro"></div>
+      <div class="bg-grid hide" id="bg_grid_ff"></div>
+      <div id="bg_sel_lbl" style="font-size:11px;color:var(--t2);text-align:center;min-height:14px"></div>
+      <label class="upload" for="bg_file">
+        <div class="upload-hint" id="bg_hint">📁 Upload custom background (JPG/PNG, max 5 MB)</div>
+        <img id="bg_prev" src="" style="display:none;max-height:56px;border-radius:6px"/>
+      </label>
+      <input type="file" id="bg_file" accept=".png,.jpg,.jpeg"
+             style="display:none" onchange="uploadBg(this)"/>
+      <button class="gi"
+              style="background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:#f87171"
+              onclick="removeBg()">Remove custom background</button>
+    </div>
+
+    <!-- Logo -->
+    <div class="card" style="gap:12px">
+      <div class="lbl">Logo</div>
+      <label class="upload" for="logo_file">
+        <img id="logo_prev" src="" style="display:none"/>
+        <div class="upload-hint" id="logo_hint">📁 Tap to upload logo (PNG/JPG/SVG, max 2 MB)</div>
+      </label>
+      <input type="file" id="logo_file" accept=".png,.jpg,.jpeg,.svg"
+             style="display:none" onchange="uploadLogo(this)"/>
+      <div>
+        <div class="lbl" style="margin-bottom:6px">Logo Position</div>
+        <select id="logo_pos" onchange="pub('logoPosition',this.value)">
+          <option value="top-left">Top Left</option>
+          <option value="top-center">Top Center</option>
+          <option value="hidden">Hidden</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Font size slider -->
+    <div class="card" style="gap:10px">
+      <div class="lbl">Typography &amp; Size</div>
+
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-lbl">Font size</span>
+          <span class="slider-val" id="fs_val">96px</span>
+        </div>
+        <input type="range" id="fs_slider" min="48" max="200" step="1" value="96"
+               oninput="onFsSlider(this.value)"/>
+      </div>
+
+      <!-- Logo size slider -->
+      <div class="slider-row">
+        <div class="slider-header">
+          <span class="slider-lbl">Logo size</span>
+          <span class="slider-val" id="ls_val">48px</span>
+        </div>
+        <input type="range" id="ls_slider" min="24" max="120" step="1" value="48"
+               oninput="onLsSlider(this.value)"/>
+      </div>
+
+      <div class="lbl" style="margin-top:4px;margin-bottom:4px">Number font</div>
+      <div id="font_list">
+        <div class="font-item">
+          <span style="font-size:13px">Default — DM Mono</span>
+          <span style="font-family:monospace;font-size:14px;color:var(--t1)">042</span>
+          <button class="gi" style="flex:none;padding:8px 14px;font-size:11px"
+                  onclick="setFont('DM Mono')">Use</button>
+        </div>
+      </div>
+      <label class="upload" for="font_file" id="font_upload_area">
+        <div class="upload-hint">📁 Upload font (TTF/OTF, max 2 MB)</div>
+      </label>
+      <input type="file" id="font_file" accept=".ttf,.otf"
+             style="display:none" onchange="uploadFont(this)"/>
+    </div>
+
+    <!-- Banner toggle -->
+    <div class="card" style="gap:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="lbl" style="margin:0">Footer Banner</span>
+        <button id="banner_btn" class="gi on" style="flex:none;padding:12px 22px"
+                onclick="toggleBanner()">Visible</button>
+      </div>
+    </div>
+
+  </div><!-- end theme pane -->
+
+</div><!-- end #app -->
+
+<!-- Sticky apply bar — always visible at bottom, never scrolled off screen -->
+<div class="sticky-apply" id="sticky_bar">
+  <button class="apply" id="apply_btn" onclick="applyPending()">Apply to Display</button>
+  <span class="apply-confirm" id="apply_confirm">Applied ✓</span>
+</div>
+
+<style id="dyn_fonts"></style>
+<script>
+/* ════════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════════ */
+let acc = '#FFB84D', layout = 'Classic', cat = 'A';
+let curBg = 'qrc:/app/res/image/ff_burger_pattern.jpg';
+let muted = false, volStep = 3, ttsOn = true, bannerOn = true;
+let gradOn = false, currentHue = 30, currentSat = 100, currentVal = 100;
+let isDragging = false, pickerCanvas, pickerCtx;
+let _confirmT;
+// Pending slider values — only sent on Apply press
+let _pendingFs = null, _pendingLs = null;
+// Current display values (from /api/state)
+let _curFs = 96, _curLs = 48;
+
+/* ════════════════════════════════════════════════════════
+   CATALOG
+════════════════════════════════════════════════════════ */
+const BG = {
+  pro: [
+    { id:'pro_abstract',        label:'Abstract',      ori:'landscape' },
+    { id:'pro_geometric',       label:'Geometric',     ori:'landscape' },
+    { id:'pro_orange_gradient', label:'Orange Glow',   ori:'portrait'  },
+    { id:'pro_purple_waves',    label:'Purple Waves',  ori:'portrait'  },
+    { id:'pro_blue_gradient',   label:'Blue Frost',    ori:'portrait'  },
+    { id:'pro_pink_gradient',   label:'Pink Gradient', ori:'portrait'  },
+  ],
+  ff: [
+    { id:'ff_red_checker',    label:'Red Checker',    ori:'portrait' },
+    { id:'ff_orange_organic', label:'Coral Swirls',   ori:'portrait' },
+    { id:'ff_green_leaves',   label:'Fresh Leaves',   ori:'portrait' },
+    { id:'ff_red_waves',      label:'Red Waves',      ori:'portrait' },
+    { id:'ff_burger_pattern', label:'Burger Pattern', ori:'portrait' },
+  ],
+};
+const TPLS = [
+  { id:'burger',       cat:'ff',  label:'Burger Joint',    acc:'#E8372A', bg:'ff_burger_pattern',  ori:'portrait'  },
+  { id:'checker',      cat:'ff',  label:'Red Checker',     acc:'#D32F2F', bg:'ff_red_checker',     ori:'portrait'  },
+  { id:'coral',        cat:'ff',  label:'Coral Energy',    acc:'#FF5722', bg:'ff_orange_organic',  ori:'portrait'  },
+  { id:'fresh',        cat:'ff',  label:'Fresh &amp; Clean',acc:'#4CAF50', bg:'ff_green_leaves',    ori:'portrait'  },
+  { id:'abstract',     cat:'pro', label:'Abstract Pro',    acc:'#9C27B0', bg:'pro_abstract',       ori:'landscape' },
+  { id:'geometric',    cat:'pro', label:'Geometric Teal',  acc:'#26A69A', bg:'pro_geometric',      ori:'landscape' },
+  { id:'blue_frost',   cat:'pro', label:'Blue Frost',      acc:'#1976D2', bg:'pro_blue_gradient',  ori:'portrait'  },
+  { id:'purple_waves', cat:'pro', label:'Purple Waves',    acc:'#7B1FA2', bg:'pro_purple_waves',   ori:'portrait'  },
+  { id:'pink',         cat:'pro', label:'Pink Luxe',       acc:'#E91E63', bg:'pro_pink_gradient',  ori:'portrait'  },
+  { id:'orange_glow',  cat:'pro', label:'Orange Glow',     acc:'#FF7043', bg:'pro_orange_gradient',ori:'portrait'  },
+];
+function qrc(id){ return `qrc:/app/res/image/${id}.jpg`; }
+function thumb(id){ return `/api/bg_thumb/${id}`; }
+
+/* ════════════════════════════════════════════════════════
+   SLIDER LOGIC — live label update, Apply on press only
+════════════════════════════════════════════════════════ */
+function onFsSlider(v) {
+  _pendingFs = parseInt(v);
+  document.getElementById('fs_val').textContent = v + 'px';
+  // Live preview: scale the number in the miniature
+  const scale = _pendingFs / 96;
+  document.getElementById('prev_num').style.fontSize = Math.round(42 * scale) + 'px';
+  // Live-update main display immediately
+  try { pub('fontSize', String(_pendingFs)); } catch(e) {}
+}
+function onLsSlider(v) {
+  _pendingLs = parseInt(v);
+  document.getElementById('ls_val').textContent = v + 'px';
+  // Live preview: nothing visible for logo size in mini preview — value shown is enough
+}
+
+/* ════════════════════════════════════════════════════════
+   STICKY APPLY — sends number OR pending slider values
+════════════════════════════════════════════════════════ */
+// Remote tab: apply the queue number
+async function applyNum() {
+  const v = String(parseInt(document.getElementById('num_input').value)||0).padStart(3,'0');
+  await pub('currentNumber', v);
+  showConfirm();
+}
+// Theme tab: apply pending slider values
+async function applyPending() {
+  const promises = [];
+  if (_pendingFs !== null && _pendingFs !== _curFs) {
+    promises.push(pub('fontSize', String(_pendingFs)));
+    _curFs = _pendingFs;
+    _pendingFs = null;
+  }
+  if (_pendingLs !== null && _pendingLs !== _curLs) {
+    promises.push(pub('logoSize', String(_pendingLs)));
+    _curLs = _pendingLs;
+    _pendingLs = null;
+  }
+  // Also apply the number if remote tab is active
+  const remoteVisible = !document.getElementById('p_remote').classList.contains('hide');
+  if (remoteVisible) {
+    const v = String(parseInt(document.getElementById('num_input').value)||0).padStart(3,'0');
+    promises.push(pub('currentNumber', v));
+  }
+  if (promises.length > 0) await Promise.all(promises);
+  showConfirm();
+}
+
+function showConfirm() {
+  const el = document.getElementById('apply_confirm');
+  el.classList.add('show');
+  clearTimeout(_confirmT);
+  _confirmT = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+/* ════════════════════════════════════════════════════════
+   TAB SWITCHING
+════════════════════════════════════════════════════════ */
+function tab(name) {
+  ['remote','settings','theme'].forEach(n => {
+    document.getElementById('p_' + n).classList.toggle('hide', n !== name);
+    document.getElementById('t_' + n).classList.toggle('on', n === name);
+  });
+  // Update Apply button label per tab
+  const labels = { remote:'Apply Number to Display', settings:'Save', theme:'Apply to Display' };
+  document.getElementById('apply_btn').textContent = labels[name] || 'Apply';
+  if (name === 'theme') setTimeout(initPicker, 80);
+}
+
+/* ════════════════════════════════════════════════════════
+   REMOTE CONTROLS
+════════════════════════════════════════════════════════ */
+function adj(d) {
+  const el = document.getElementById('num_input');
+  el.value = Math.max(0, Math.min(999, (parseInt(el.value)||0) + d));
+  prevNum();
+}
+function prevNum() {
+  const v = String(parseInt(document.getElementById('num_input').value)||0).padStart(3,'0');
+  document.getElementById('prev_num').textContent = v;
+}
+
+/* ════════════════════════════════════════════════════════
+   VOLUME / MUTE
+════════════════════════════════════════════════════════ */
+function setVol(v) {
+  // Backwards-compatible: accept discrete steps 0..4
+  const pct = Math.round((parseInt(v) / 4) * 100);
+  document.getElementById('vol_slider').value = pct;
+  document.getElementById('vol_label').textContent = pct + '%';
+  const step = Math.max(0, Math.min(4, parseInt(v)));
+  pub('audioVolumeStep', String(step));
+}
+function toggleMute() {
+  muted = !muted;
+  const btn = document.getElementById('mute_btn');
+  btn.textContent = muted ? 'Muted' : 'Unmuted';
+  btn.classList.toggle('on', muted);
+  pub('audioMuted', muted ? 'true' : 'false');
+}
+
+function onVolSlider(v) {
+  const pct = Math.max(0, Math.min(100, parseInt(v)));
+  document.getElementById('vol_label').textContent = pct + '%';
+  // Map 0-100% to steps 0..4
+  const step = Math.round(pct / 25);
+  pub('audioVolumeStep', String(step));
+}
+
+/* ════════════════════════════════════════════════════════
+   SETTINGS SAVES
+════════════════════════════════════════════════════════ */
+async function saveCategory() {
+  const id   = document.getElementById('cat_id').value.trim();
+  const name = document.getElementById('cat_name').value.trim();
+  if (id)   await pub('category', id);
+  if (name) await pub('categoryDisplayName', name);
+  if (id)   { document.getElementById('rc_code').textContent = id; cat = id; }
+  if (name) {
+    document.getElementById('rc_name').textContent = name;
+    document.getElementById('prev_cat').textContent = name;
+  }
+  showConfirm();
+}
+async function saveGeneral() {
+  const fac = document.getElementById('facility').value.trim();
+  const ban = document.getElementById('banner').value.trim();
+  if (fac) { await pub('facilityName', fac); document.getElementById('prev_fac').textContent = fac; }
+  if (ban) await pub('bannerText', ban);
+  showConfirm();
+}
+function toggleTts() {
+  ttsOn = !ttsOn;
+  const btn = document.getElementById('tts_btn');
+  btn.textContent = ttsOn ? 'Enabled' : 'Disabled';
+  btn.classList.toggle('on', ttsOn);
+  pub('ttsEnabled', ttsOn ? 'true' : 'false');
+}
+async function changePin() {
+  const p = document.getElementById('new_pin').value.trim();
+  if (p.length !== 4 || !/^\d{4}$/.test(p)) { showConfirm(); return; }
+  await pub('adminPin', p);
+  document.getElementById('new_pin').value = '';
+  showConfirm();
+}
+
+/* ════════════════════════════════════════════════════════
+   THEME CONTROLS
+════════════════════════════════════════════════════════ */
+function setLayout(l) {
+  layout = l;
+  document.querySelectorAll('.lay-thumb').forEach(el =>
+    el.classList.toggle('on', el.id === 'lay_' + l));
+  pub('layoutType', l);
+}
+function toggleBanner() {
+  bannerOn = !bannerOn;
+  const btn = document.getElementById('banner_btn');
+  btn.textContent = bannerOn ? 'Visible' : 'Hidden';
+  btn.classList.toggle('on', bannerOn);
+  pub('bannerEnabled', bannerOn ? 'true' : 'false');
+}
+function toggleGrad() {
+  gradOn = !gradOn;
+  const btn = document.getElementById('grad_btn');
+  btn.textContent = gradOn ? 'On' : 'Off';
+  btn.classList.toggle('on', gradOn);
+  pub('accentGradientEnabled', gradOn ? 'true' : 'false');
+}
+function setFont(f) {
+  pub('numberFont', f);
+  // update preview immediately
+  try {
+    document.getElementById('prev_num').style.fontFamily = f;
+    document.getElementById('prev_cat').style.fontFamily = f;
+  } catch(e) {}
+  showConfirm();
+}
+
+/* ════════════════════════════════════════════════════════
+   BACKGROUND
+════════════════════════════════════════════════════════ */
+function buildTpls() {
+  ['ff','pro'].forEach(c => {
+    const el = document.getElementById('tpl_' + c);
+    el.innerHTML = '';
+    TPLS.filter(t => t.cat === c).forEach(t => {
+      const d = document.createElement('div');
+      d.className = 'tpl-card'; d.id = 'tpl_' + t.id;
+      d.onclick = () => applyTpl(t);
+      d.innerHTML = `
+        <div class="tpl-bg" style="background-image:url('${thumb(t.bg)}')"></div>
+        <div class="tpl-overlay" style="background:rgba(0,0,0,.45)"></div>
+        <div class="tpl-body">
+          <div class="tpl-num" style="color:${t.acc}">001</div>
+          <div class="tpl-name">${t.label}</div>
+        </div>`;
+      el.appendChild(d);
+    });
+  });
+}
+function buildBgGrids() {
+  ['pro','ff'].forEach(c => {
+    const el = document.getElementById('bg_grid_' + c);
+    el.innerHTML = '';
+    BG[c].forEach(bg => {
+      const b = document.createElement('button');
+      b.className = 'bg-btn'; b.id = 'bgb_' + bg.id; b.title = bg.label;
+      b.innerHTML = `<img src="${thumb(bg.id)}" alt="${bg.label}" loading="lazy"/>
+                     <div class="bg-label">${bg.label}</div>`;
+      b.onclick = () => selectBg(bg);
+      el.appendChild(b);
+    });
+  });
+}
+function bgTab(c) {
+  document.getElementById('bg_grid_pro').classList.toggle('hide', c !== 'pro');
+  document.getElementById('bg_grid_ff').classList.toggle('hide', c !== 'ff');
+  document.getElementById('bg_t_pro').classList.toggle('on', c === 'pro');
+  document.getElementById('bg_t_ff').classList.toggle('on', c === 'ff');
+}
+function selectBg(bg) {
+  document.querySelectorAll('.bg-btn').forEach(b => b.classList.remove('on'));
+  const b = document.getElementById('bgb_' + bg.id);
+  if (b) b.classList.add('on');
+  document.getElementById('bg_sel_lbl').textContent = bg.label;
+  curBg = qrc(bg.id);
+  setPrevBg(curBg);
+  Promise.all([pub('backgroundImage', qrc(bg.id)), pub('backgroundOrientation', bg.ori)]);
+  showConfirm();
+}
+function highlightBg(qrcUrl) {
+  document.querySelectorAll('.bg-btn').forEach(b => b.classList.remove('on'));
+  for (const c of ['pro','ff']) {
+    for (const bg of BG[c]) {
+      if (qrc(bg.id) === qrcUrl) {
+        const b = document.getElementById('bgb_' + bg.id);
+        if (b) b.classList.add('on');
+        document.getElementById('bg_sel_lbl').textContent = bg.label;
+        bgTab(c); return;
+      }
+    }
+  }
+}
+function setPrevBg(qrcUrl) {
+  const el = document.getElementById('prev_bg');
+  for (const c of ['pro','ff']) {
+    for (const bg of BG[c]) {
+      if (qrc(bg.id) === qrcUrl) {
+        el.style.backgroundImage = `url('${thumb(bg.id)}')`;
+        return;
+      }
+    }
+  }
+  if (qrcUrl && (qrcUrl.startsWith('/uploads/') || qrcUrl.startsWith('http')))
+    el.style.backgroundImage = `url('${qrcUrl}')`;
+}
+async function applyTpl(t) {
+  document.querySelectorAll('.tpl-card').forEach(c => c.classList.remove('on'));
+  const card = document.getElementById('tpl_' + t.id);
+  if (card) card.classList.add('on');
+  setAccLocal(t.acc);
+  curBg = qrc(t.bg);
+  setPrevBg(curBg);
+  highlightBg(curBg);
+  await Promise.all([
+    pub('backgroundImage', qrc(t.bg)),
+    pub('backgroundOrientation', t.ori),
+    pub('accentColor', t.acc),
+    pub('numberFont', 'DM Mono'),
+  ]);
+  showConfirm();
+}
+function removeBg() {
+  const def = 'qrc:/app/res/image/ff_burger_pattern.jpg';
+  curBg = def;
+  Promise.all([pub('backgroundImage', def), pub('backgroundOrientation', 'portrait')]);
+  setPrevBg(def); highlightBg(def);
+  showConfirm();
+}
+
+/* ════════════════════════════════════════════════════════
+   COLOR PICKER
+════════════════════════════════════════════════════════ */
+function initPicker() {
+  pickerCanvas = document.getElementById('color_canvas');
+  if (!pickerCanvas || pickerCtx) return;
+  pickerCtx = pickerCanvas.getContext('2d');
+  pickerCanvas.addEventListener('mousedown', e => { isDragging = true; pickColor(e); });
+  pickerCanvas.addEventListener('touchstart', e => { isDragging = true; pickColor(e.touches[0]); }, {passive:true});
+  window.addEventListener('mousemove', e => { if (isDragging) pickColor(e); });
+  window.addEventListener('touchmove', e => { if (isDragging) pickColor(e.touches[0]); }, {passive:true});
+  window.addEventListener('mouseup',  () => isDragging = false);
+  window.addEventListener('touchend', () => isDragging = false);
+  drawSquare();
+}
+function drawSquare() {
+  if (!pickerCtx) return;
+  const w = pickerCanvas.width, h = pickerCanvas.height;
+  const gW = pickerCtx.createLinearGradient(0,0,w,0);
+  gW.addColorStop(0,'#fff'); gW.addColorStop(1,`hsl(${currentHue},100%,50%)`);
+  pickerCtx.fillStyle = gW; pickerCtx.fillRect(0,0,w,h);
+  const gB = pickerCtx.createLinearGradient(0,0,0,h);
+  gB.addColorStop(0,'transparent'); gB.addColorStop(1,'#000');
+  pickerCtx.fillStyle = gB; pickerCtx.fillRect(0,0,w,h);
+}
+function pickColor(e) {
+  const r = pickerCanvas.getBoundingClientRect();
+  const x = Math.max(0,Math.min(pickerCanvas.width,  (e.clientX-r.left)*(pickerCanvas.width/r.width)));
+  const y = Math.max(0,Math.min(pickerCanvas.height, (e.clientY-r.top)*(pickerCanvas.height/r.height)));
+  currentSat = (x/pickerCanvas.width)*100;
+  currentVal = 100-(y/pickerCanvas.height)*100;
+  const px = pickerCtx.getImageData(Math.floor(x),Math.floor(y),1,1).data;
+  const hex = '#'+[px[0],px[1],px[2]].map(c=>c.toString(16).padStart(2,'0')).join('');
+  document.getElementById('color_hex').value = hex;
+  setAccLocal(hex); pub('accentColor', hex);
+}
+function updateHue(h) {
+  currentHue = parseInt(h); drawSquare();
+  const cw = pickerCanvas?pickerCanvas.width:300, ch = pickerCanvas?pickerCanvas.height:140;
+  const x = (currentSat/100)*cw, y = (1-currentVal/100)*ch;
+  if (pickerCtx) {
+    const px = pickerCtx.getImageData(Math.max(0,Math.floor(x)),Math.max(0,Math.floor(y)),1,1).data;
+    const hex = '#'+[px[0],px[1],px[2]].map(c=>c.toString(16).padStart(2,'0')).join('');
+    setAccLocal(hex); pub('accentColor',hex);
+    document.getElementById('color_hex').value = hex;
+  }
+}
+function updateHex(hex) {
+  if (/^#[0-9A-F]{6}$/i.test(hex)) { setAccLocal(hex); pub('accentColor',hex); }
+}
+function setAccLocal(hex) {
+  acc = hex;
+  document.documentElement.style.setProperty('--acc', hex);
+  document.getElementById('prev_bar').style.background = hex;
+  document.getElementById('prev_cat').style.color = hex;
+  document.getElementById('color_hex').value = hex;
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  const max=Math.max(r,g,b)/255,min=Math.min(r,g,b)/255;
+  let h=0;
+  if (max!==min){const d=max-min,rm=r/255,gm=g/255,bm=b/255;
+    if(max===rm)h=((gm-bm)/d+(gm<bm?6:0))*60;
+    else if(max===gm)h=((bm-rm)/d+2)*60;
+    else h=((rm-gm)/d+4)*60;}
+  document.getElementById('hue_slider').value = Math.round(h);
+}
+
+/* ════════════════════════════════════════════════════════
+   UPLOADS
+════════════════════════════════════════════════════════ */
+async function uploadBg(input) {
+  const file = input.files[0]; if (!file) return;
+  if (file.size > 5*1024*1024) { showConfirm(); return; }
+  const fd = new FormData(); fd.append('background', file);
+  try {
+    const r = await fetch('/api/background',{method:'POST',body:fd});
+    const d = await r.json();
+    if (d.ok) {
+      curBg = d.url;
+      document.getElementById('prev_bg').style.backgroundImage=`url('${d.url}?${Date.now()}')`;
+      document.getElementById('bg_hint').style.display='none';
+      const img = document.getElementById('bg_prev');
+      img.src=d.url+'?'+Date.now(); img.style.display='block';
+      document.getElementById('bg_sel_lbl').textContent='Custom upload';
+      showConfirm();
+    }
+  } catch(e) {}
+}
+async function uploadLogo(input) {
+  const file = input.files[0]; if (!file) return;
+  if (file.size > 2*1024*1024) return;
+  const fd = new FormData(); fd.append('logo', file);
+  try {
+    const r = await fetch('/api/logo',{method:'POST',body:fd});
+    const d = await r.json();
+    if (d.ok) {
+      const img = document.getElementById('logo_prev');
+      img.src=d.url+'?'+Date.now(); img.style.display='block';
+      document.getElementById('logo_hint').style.display='none';
+      showConfirm();
+    }
+  } catch(e) {}
+}
+async function uploadFont(input) {
+  const file = input.files[0]; if (!file) return;
+  if (file.size > 2*1024*1024) return;
+  const fd = new FormData(); fd.append('font', file);
+  try {
+    const r = await fetch('/api/font',{method:'POST',body:fd});
+    const d = await r.json();
+    if (d.ok) { await loadFonts(); showConfirm(); }
+  } catch(e) {}
+}
+async function loadFonts() {
+  try {
+    const r = await fetch('/api/fonts');
+    const d = await r.json();
+    if (!d.ok) return;
+    const container = document.getElementById('font_list');
+    const extras = d.fonts || [];
+    document.getElementById('dyn_fonts').textContent =
+      extras.map(f=>`@font-face{font-family:'${f.family}';src:url('${f.url}')}`).join('\n');
+    container.querySelectorAll('.custom-font-item').forEach(el=>el.remove());
+    if (extras.length === 0) return;
+    extras.forEach(f => {
+      const div = document.createElement('div');
+      div.className = 'font-item custom-font-item';
+      div.innerHTML = `
+        <span style="font-size:13px">${f.family}</span>
+        <span style="font-family:'${f.family}';font-size:14px;color:var(--t1)">042</span>
+        <button class="gi" style="flex:none;padding:8px 14px;font-size:11px"
+          onclick="setFont('${f.family}')">Use</button>`;
+      container.appendChild(div);
+    });
+  } catch(e) {}
+}
+
+/* ════════════════════════════════════════════════════════
+   STATS
+════════════════════════════════════════════════════════ */
+async function loadStats() {
+  try {
+    const r = await fetch('/api/stats');
+    const d = await r.json();
+    document.getElementById('s_up').textContent   = d.uptime||'—';
+    document.getElementById('s_sess').textContent = d.session_count||'—';
+    document.getElementById('s_chg').textContent  = d.number_change_count||'0';
+    const ts = d.last_restart_ts;
+    if (ts) {
+      const dt = new Date(ts*1000);
+      document.getElementById('s_rst').textContent =
+        dt.toLocaleDateString()+' '+dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    }
+  } catch(e) {}
+}
+
+/* ════════════════════════════════════════════════════════
+   API
+════════════════════════════════════════════════════════ */
+function pub(key, value) {
+  return fetch('/api/publish',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({topic:'display/'+key, payload:String(value)})
+  });
+}
+
+/* ════════════════════════════════════════════════════════
+   INIT — load state from /api/state and hydrate UI
+════════════════════════════════════════════════════════ */
+async function init() {
+  buildTpls();
+  buildBgGrids();
+
+  try {
+    const r = await fetch('/api/state');
+    const d = await r.json();
+
+    cat = d.category || 'A';
+    document.getElementById('cat_id').value        = cat;
+    document.getElementById('rc_code').textContent = cat;
+    const cname = d.categoryDisplayName || 'Category A';
+    document.getElementById('cat_name').value       = cname;
+    document.getElementById('rc_name').textContent  = cname;
+    document.getElementById('prev_cat').textContent = cname;
+
+    document.getElementById('num_input').value      = parseInt(d.currentNumber)||1;
+    document.getElementById('prev_num').textContent = d.currentNumber||'001';
+
+    document.getElementById('facility').value        = d.facilityName||'';
+    document.getElementById('prev_fac').textContent  = d.facilityName||'';
+    document.getElementById('banner').value          = d.bannerText||'';
+
+    if (d.accentColor) setAccLocal(d.accentColor);
+
+    if (d.layoutType) {
+      layout = d.layoutType;
+      document.querySelectorAll('.lay-thumb').forEach(el =>
+        el.classList.toggle('on', el.id==='lay_'+d.layoutType));
+    }
+
+    if (d.backgroundImage) {
+      curBg = d.backgroundImage;
+      setPrevBg(d.backgroundImage);
+      highlightBg(d.backgroundImage);
+    }
+
+    // Logo — show empty-state prompt if no logo uploaded yet
+    if (d.logoUrl) {
+      const img = document.getElementById('logo_prev');
+      img.src = d.logoUrl; img.style.display='block';
+      document.getElementById('logo_hint').style.display='none';
+    } else {
+      document.getElementById('logo_hint').textContent = '📁 No logo uploaded — tap to add one';
+    }
+    if (d.logoPosition) document.getElementById('logo_pos').value = d.logoPosition;
+
+    // Audio state
+    muted   = d.audioMuted==='true'||d.audioMuted===true;
+    volStep = parseInt(d.audioVolumeStep)||3;
+    ttsOn   = d.ttsEnabled!=='false'&&d.ttsEnabled!==false;
+    bannerOn= d.bannerEnabled!=='false'&&d.bannerEnabled!==false;
+    gradOn  = d.accentGradientEnabled==='true'||d.accentGradientEnabled===true;
+
+    document.getElementById('mute_btn').textContent = muted?'Muted':'Unmuted';
+    document.getElementById('mute_btn').classList.toggle('on', muted);
+    // Initialize volume slider from step index
+    const pctInit = Math.round((volStep / 4) * 100);
+    const vs = document.getElementById('vol_slider');
+    if (vs) { vs.value = pctInit; document.getElementById('vol_label').textContent = pctInit + '%'; }
+    document.getElementById('tts_btn').textContent = ttsOn?'Enabled':'Disabled';
+    document.getElementById('tts_btn').classList.toggle('on', ttsOn);
+    document.getElementById('tts_lang').value = d.ttsLanguage||'en';
+    document.getElementById('banner_btn').textContent = bannerOn?'Visible':'Hidden';
+    document.getElementById('banner_btn').classList.toggle('on', bannerOn);
+    if (document.getElementById('grad_btn')) {
+      document.getElementById('grad_btn').textContent = gradOn?'On':'Off';
+      document.getElementById('grad_btn').classList.toggle('on', gradOn);
+    }
+
+    // Font size slider — init from persisted value
+    _curFs = parseInt(d.fontSize)||96;
+    _curFs = Math.max(48, Math.min(200, _curFs));
+    document.getElementById('fs_slider').value       = _curFs;
+    document.getElementById('fs_val').textContent    = _curFs+'px';
+    document.getElementById('prev_num').style.fontSize = Math.round(42*(_curFs/96))+'px';
+    // Apply font family to preview (number and category)
+    if (d.numberFont) {
+      document.getElementById('prev_num').style.fontFamily = d.numberFont;
+      document.getElementById('prev_cat').style.fontFamily = d.numberFont;
+    }
+
+    // Logo size slider — init from persisted value
+    _curLs = parseInt(d.logoSize)||48;
+    _curLs = Math.max(24, Math.min(120, _curLs));
+    document.getElementById('ls_slider').value    = _curLs;
+    document.getElementById('ls_val').textContent = _curLs+'px';
+
+  } catch(e) { console.error('init error', e); }
+
+  loadStats();
+  setInterval(loadStats, 30000);
+  loadFonts();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
