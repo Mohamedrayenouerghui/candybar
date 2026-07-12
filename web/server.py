@@ -105,6 +105,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self._serve_file("admin.html")
         elif path.startswith("/uploads/"):
             self._serve_static(os.path.join(UPLOAD_DIR, path[len("/uploads/"):]))
+        elif path.startswith("/videos/"):
+            video_name = path[len("/videos/"):]
+            self._serve_static(os.path.join(SERVE_DIR, "videos", video_name))
         elif path == "/favicon.ico":
             self._serve_qrc(":/app/res/image/favicon.ico", "image/x-icon")
         elif path.startswith("/api/bg_thumb/"):
@@ -309,10 +312,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
             "logoVisible":            p.load("logoVisible", "true"),
             "logoPosition":           p.load("logoPosition", "top-left"),
             "backgroundImage":        bg_url,
+            "backgroundFitMode":     p.load("backgroundFitMode", "crop"),
+            "backgroundScale":       p.load("backgroundScale", "1.0"),
+            "backgroundOffsetX":     p.load("backgroundOffsetX", "0"),
+            "backgroundOffsetY":     p.load("backgroundOffsetY", "0"),
             "backgroundOrientation":  p.load("backgroundOrientation", "portrait"),
+            "backgroundType":         p.load("backgroundType", "image"),
+            "backgroundVideoSource":  p.load("backgroundVideoSource", ""),
             "category":               p.load("category", "A"),
             "categoryDisplayName":    p.load("categoryDisplayName", "Category A"),
             "ttsLanguage":            p.load("ttsLanguage", "en"),
+            "displayLanguage":        p.load("displayLanguage", "en"),
             "ttsEnabled":             p.load("ttsEnabled", "true"),
             "audioMuted":             p.load("audioMuted", "false"),
             "audioVolumeStep":        p.load("audioVolumeStep", "3"),
@@ -336,9 +346,51 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if not os.path.isfile(fpath):
             self._send(404, "text/plain", b"Not found")
             return
+        
+        file_size = os.path.getsize(fpath)
         mime, _ = mimetypes.guess_type(fpath)
+        range_header = self.headers.get("Range")
+        
+        if range_header:
+            # Parse Range header (e.g., bytes=0-100)
+            match = re.match(r"bytes=(\d+)-(\d*)", range_header)
+            if match:
+                start = int(match.group(1))
+                end_str = match.group(2)
+                end = int(end_str) if end_str else file_size - 1
+                
+                if start >= file_size:
+                    self._send(416, "text/plain", b"Requested Range Not Satisfiable")
+                    return
+                
+                end = min(end, file_size - 1)
+                length = end - start + 1
+                
+                with open(fpath, "rb") as f:
+                    f.seek(start)
+                    data = f.read(length)
+                
+                self.send_response(206)  # Partial Content
+                self.send_header("Content-Type", mime or "application/octet-stream")
+                self.send_header("Content-Length", str(length))
+                self.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
+                self.send_header("Accept-Ranges", "bytes")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(data)
+                return
+        
+        # No range requested, send entire file
         with open(fpath, "rb") as f:
-            self._send(200, mime or "application/octet-stream", f.read())
+            data = f.read()
+        
+        self.send_response(200)
+        self.send_header("Content-Type", mime or "application/octet-stream")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(data)
 
     def _json_response(self, obj: dict):
         self._send(200, "application/json", json.dumps(obj).encode())

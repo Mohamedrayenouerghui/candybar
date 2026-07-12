@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import FluentUI 1.0
 import "global"
+import QtMultimedia
 
 // ── DisplayView ──────────────────────────────────────────────────────────
 // The permanent, always-on display. Hosts Classic, Split, and Centered layouts.
@@ -31,6 +32,12 @@ import "global"
 Item {
     id: root
     anchors.fill: parent
+
+    // RTL mirroring — automatically mirrors Row/RowLayout children when
+    // displayLanguage is Arabic. Individual text items use their own
+    // horizontal alignment so they are unaffected by mirroring.
+    LayoutMirroring.enabled:  DisplayState.isRtl
+    LayoutMirroring.childrenInherit: true
 
     // ── Timing constants ─────────────────────────────────────────────────
     readonly property int dur_micro: 150   // number exit
@@ -74,6 +81,12 @@ Item {
     property color accent_gold_dim: Qt.rgba(DisplayState.accentColor.r,
                                             DisplayState.accentColor.g,
                                             DisplayState.accentColor.b, 0.15)
+    Behavior on accent_gold {
+        ColorAnimation {
+            duration: root.dur_full
+            easing.type: Easing.InOutQuad
+        }
+    }
 
     // Glass card behind the whole number+category stack — a soft, neutral
     // dark scrim that guarantees a stable contrast surface no matter what
@@ -185,10 +198,10 @@ Item {
     // NowServingLabel: still the smallest tier, but now clearly readable —
     // bumped from Font.Light to Font.Bold, higher opacity, and pure white
     // instead of the tinted secondary color so it doesn't wash out against
-    // the glass card.
+    // the glass card. Text is translated via DisplayState.tr().
     component NowServingLabel: Text {
         Layout.alignment: Qt.AlignHCenter
-        text: "NOW SERVING"
+        text: DisplayState.tr("now_serving")
         font.family: DisplayState.nowServingFont || DisplayState.numberFont
         font.pixelSize: Math.max(DisplayState.nowServingFontSize || Math.max(root.height * 0.021, 11), 10)
         font.letterSpacing: 5
@@ -277,13 +290,169 @@ Item {
     }
 
     // ── Background ───────────────────────────────────────────────────────
-    Image {
+    property int _bgFillMode: Image.PreserveAspectCrop
+
+    function _resolveBackgroundFillMode(target) {
+        var mode = DisplayState.backgroundFitMode
+        if (mode === "fit") return Image.PreserveAspectFit
+        if (mode === "stretch") return Image.Stretch
+        if (mode === "auto") {
+            if (target && target.status === Image.Ready && target.sourceSize.width > 0 && target.sourceSize.height > 0) {
+                var imgRatio = target.sourceSize.width / target.sourceSize.height
+                var screenRatio = root.width / Math.max(1, root.height)
+                return Math.abs(imgRatio - screenRatio) > 0.25 ? Image.PreserveAspectFit : Image.PreserveAspectCrop
+            }
+            return Image.PreserveAspectCrop
+        }
+        return Image.PreserveAspectCrop
+    }
+
+    function _updateBackgroundFitMode() {
+        _bgFillMode = _resolveBackgroundFillMode(background_image)
+    }
+
+    function _videoSourceForState() {
+        if (DisplayState.backgroundType !== "video") return ""
+        var src = DisplayState.backgroundVideoSource || ""
+        if (!src) return ""
+        if (src.startsWith("file://") || src.startsWith("http://") || src.startsWith("https://")) return src
+        if (src.startsWith("/")) return DisplayState.publicUrl.replace(/\/$/, "") + src
+        return src
+    }
+
+    function _reloadBackgroundVideo() {
+        if (DisplayState.backgroundType !== "video") return
+        var src = root._videoSourceForState()
+        console.log("[display] reload background video", DisplayState.backgroundType, src)
+        if (!src) return
+        
+        // Use a more efficient approach without stopping first if source is the same
+        if (background_video_player.source !== src) {
+            background_video_player.stop()
+            background_video_player.source = src
+        }
+        background_video_player.play()
+    }
+
+    Item {
+        id: background_layer
         anchors.fill: parent
-        source:   DisplayState.backgroundImage
-        fillMode: Image.PreserveAspectCrop
-        asynchronous: false
-        cache:  false
-        smooth: true
+        clip: true
+
+        Image {
+            id: background_image
+            anchors.fill: parent
+            opacity: DisplayState.backgroundType !== "video" ? 1 : 0
+            source: DisplayState.backgroundType === "video" ? "" : DisplayState.backgroundImage
+            fillMode: root._bgFillMode
+            asynchronous: false
+            cache: false
+            smooth: true
+            scale: DisplayState.backgroundScale
+            transformOrigin: Item.Center
+            transform: Translate {
+                x: DisplayState.backgroundOffsetX
+                y: DisplayState.backgroundOffsetY
+            }
+            onStatusChanged: root._updateBackgroundFitMode()
+            onSourceSizeChanged: root._updateBackgroundFitMode()
+            Behavior on opacity {
+                NumberAnimation { duration: 350; easing.type: Easing.InOutQuad }
+            }
+        }
+
+        MediaPlayer {
+            id: background_video_player
+            source: root._videoSourceForState()
+            loops: MediaPlayer.Infinite
+            audioOutput: null
+            videoOutput: background_video_output
+            onSourceChanged: {
+                console.log("[display] video source changed:", source)
+                if (source.toString() !== "" && DisplayState.backgroundType === "video") {
+                    play()
+                }
+            }
+            onErrorOccurred: function(errorString, error) {
+                console.log("[display] background video error:", errorString, "source:", source, "error:", error)
+            }
+            onPlaybackStateChanged: {
+                console.log("[display] playback state:", playbackState)
+            }
+        }
+
+        VideoOutput {
+            id: background_video_output
+            anchors.fill: parent
+            opacity: (DisplayState.backgroundType === "video" && 
+                     background_video_player.playbackState === MediaPlayer.PlayingState) ? 1 : 0
+            fillMode: DisplayState.backgroundFitMode === "stretch"
+                      ? VideoOutput.Stretch
+                      : (DisplayState.backgroundFitMode === "fit"
+                         ? VideoOutput.PreserveAspectFit
+                         : VideoOutput.PreserveAspectCrop)
+            scale: DisplayState.backgroundScale
+            transformOrigin: Item.Center
+            transform: Translate {
+                x: DisplayState.backgroundOffsetX
+                y: DisplayState.backgroundOffsetY
+            }
+            Behavior on opacity {
+                NumberAnimation { duration: 350; easing.type: Easing.InOutQuad }
+            }
+        }
+
+        // Video loading indicator
+        Item {
+            anchors.centerIn: parent
+            visible: DisplayState.backgroundType === "video" && 
+                     (background_video_player.playbackState === MediaPlayer.LoadingState || 
+                      background_video_player.playbackState === MediaPlayer.StoppedState || 
+                      background_video_player.playbackState === MediaPlayer.PausedState)
+            width: 60; height: 60
+            
+            Rectangle {
+                id: loaderRect
+                anchors.centerIn: parent
+                width: 48; height: 48
+                radius: 24
+                color: "transparent"
+                border {
+                    width: 4
+                    color: root.accent_gold
+                }
+                
+                RotationAnimator on rotation {
+                    from: 0; to: 360
+                    duration: 1000
+                    loops: Animation.Infinite
+                    running: parent.visible
+                }
+            }
+        }
+    }
+
+    function _updateBackground() {
+        // Handle both image and video backgrounds
+        root._updateBackgroundFitMode()
+        
+        if (DisplayState.backgroundType === "video") {
+            root._reloadBackgroundVideo()
+        } else {
+            // Stop video playback when switching to image background
+            background_video_player.stop()
+        }
+    }
+
+    Connections {
+        target: DisplayState
+        function onBackgroundFitModeChanged() { root._updateBackground() }
+        function onBackgroundImageChanged() { root._updateBackground() }
+        function onBackgroundScaleChanged() { root._updateBackground() }
+        function onBackgroundOffsetXChanged() { root._updateBackground() }
+        function onBackgroundOffsetYChanged() { root._updateBackground() }
+        function onBackgroundTypeChanged() { root._updateBackground() }
+        function onBackgroundVideoSourceChanged() { root._updateBackground() }
     }
 
     // Dark scrim — enough for text contrast, not so much it kills the image
@@ -511,29 +680,42 @@ Item {
                 clip: true
                 visible: DisplayState.bannerEnabled
 
-                Row {
-                    id: ticker_row_classic
-                    height: parent.height
-                    spacing: 96
-                    Repeater {
-                        model: 3
-                        Text {
-                            height:            ticker_row_classic.height
-                            verticalAlignment: Text.AlignVCenter
-                            text:              "  ·  " + DisplayState.bannerText
-                            font.family:       DisplayState.bannerFont || DisplayState.numberFont
-                            font.pixelSize:    Math.max(DisplayState.bannerFontSize || Math.max(root.height * 0.025, 12), 10)
-                            font.weight:       Font.DemiBold
-                            color:             root.text_primary
-                            opacity:           0.9
-                            style:             Text.Raised
-                            styleColor:        Qt.rgba(0, 0, 0, 0.6)
+                Item {
+                    id: ticker_track_classic
+                    anchors.fill: parent
+                    clip: true
+
+                    Row {
+                        id: ticker_row_classic
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: parent.height
+                        spacing: 96
+                        Repeater {
+                            model: 3
+                            Text {
+                                height:            ticker_row_classic.height
+                                verticalAlignment: Text.AlignVCenter
+                                text:              "  ·  " + DisplayState.bannerText
+                                font.family:       DisplayState.bannerFont || DisplayState.numberFont
+                                font.pixelSize:    Math.max(DisplayState.bannerFontSize || Math.max(root.height * 0.025, 12), 10)
+                                font.weight:       Font.DemiBold
+                                color:             root.text_primary
+                                opacity:           0.9
+                                style:             Text.Raised
+                                styleColor:        Qt.rgba(0, 0, 0, 0.6)
+                            }
                         }
                     }
-                    NumberAnimation on x {
-                        from: 0; to: -(ticker_row_classic.width / 3)
-                        duration: 16000; loops: Animation.Infinite
-                        running: true; easing.type: Easing.Linear
+
+                    NumberAnimation {
+                        target: ticker_track_classic
+                        property: "x"
+                        from: 0
+                        to: -ticker_row_classic.width
+                        duration: 16000
+                        loops: Animation.Infinite
+                        running: true
+                        easing.type: Easing.Linear
                     }
                 }
             }
@@ -638,7 +820,7 @@ Item {
 
                     // "NEXT UP" — clearly secondary, small and dim
                     Text {
-                        text:           "NEXT UP"
+                        text:           DisplayState.tr("next_up")
                         font.family:    DisplayState.uiFont
                         font.pixelSize: Math.max(root.height * 0.018, 9)
                         font.letterSpacing: 5
@@ -698,29 +880,42 @@ Item {
                         color: Qt.rgba(0, 0, 0, 0.42)
                         clip: true
 
-                        Row {
-                            id: ticker_row_split
-                            height: parent.height
-                            spacing: 64
-                            Repeater {
-                                model: 3
-                                Text {
-                                    height:            ticker_row_split.height
-                                    verticalAlignment: Text.AlignVCenter
-                                    text:              "  ·  " + DisplayState.bannerText
-                                    font.family:       DisplayState.uiFont
-                                    font.pixelSize:    Math.max(root.height * 0.021, 11)
-                                    font.weight:       Font.DemiBold
-                                    color:             root.text_primary
-                                    opacity:           0.9
-                                    style:             Text.Raised
-                                    styleColor:        Qt.rgba(0, 0, 0, 0.6)
+                        Item {
+                            id: ticker_track_split
+                            anchors.fill: parent
+                            clip: true
+
+                            Row {
+                                id: ticker_row_split
+                                anchors.verticalCenter: parent.verticalCenter
+                                height: parent.height
+                                spacing: 64
+                                Repeater {
+                                    model: 3
+                                    Text {
+                                        height:            ticker_row_split.height
+                                        verticalAlignment: Text.AlignVCenter
+                                        text:              "  ·  " + DisplayState.bannerText
+                                        font.family:       DisplayState.uiFont
+                                        font.pixelSize:    Math.max(root.height * 0.021, 11)
+                                        font.weight:       Font.DemiBold
+                                        color:             root.text_primary
+                                        opacity:           0.9
+                                        style:             Text.Raised
+                                        styleColor:        Qt.rgba(0, 0, 0, 0.6)
+                                    }
                                 }
                             }
-                            NumberAnimation on x {
-                                from: 0; to: -(ticker_row_split.width / 3)
-                                duration: 14000; loops: Animation.Infinite
-                                running: true; easing.type: Easing.Linear
+
+                            NumberAnimation {
+                                target: ticker_track_split
+                                property: "x"
+                                from: 0
+                                to: -ticker_row_split.width
+                                duration: 14000
+                                loops: Animation.Infinite
+                                running: true
+                                easing.type: Easing.Linear
                             }
                         }
                     }

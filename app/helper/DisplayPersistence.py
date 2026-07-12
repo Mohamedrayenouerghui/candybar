@@ -30,18 +30,19 @@ def _data_dir() -> str:
 class DisplayPersistence(QObject):
     def __init__(self):
         super().__init__(QGuiApplication.instance())
-        ini_path = os.path.join(_data_dir(), "candybar_display.ini")
-        self._s = QSettings(ini_path, QSettings.Format.IniFormat)
+        self._ini_path = os.path.join(_data_dir(), "candybar_display.ini")
 
     # ── generic helpers ────────────────────────────────────────────────
-    @Slot(str, result='QVariant')
+    @Slot(str, 'QVariant')
     def save(self, key: str, value) -> None:
-        self._s.setValue(key, value)
-        self._s.sync()
+        s = QSettings(self._ini_path, QSettings.Format.IniFormat)
+        s.setValue(key, value)
+        s.sync()
 
     @Slot(str, 'QVariant', result='QVariant')
     def load(self, key: str, default=None):
-        v = self._s.value(key)
+        s = QSettings(self._ini_path, QSettings.Format.IniFormat)
+        v = s.value(key)
         return v if v is not None else default
 
     # ── logo file handling ─────────────────────────────────────────────
@@ -121,3 +122,8 @@ class DisplayPersistence(QObject):
             return val if 8 <= val <= 240 else default
         except (TypeError, ValueError):
             return default
+
+    def get_display_language(self) -> str:
+        """Return the display language code (en / fr / ar). Default en."""
+        v = str(self.load("displayLanguage", "en"))
+        return v if v in ("en", "fr", "ar") else "en"

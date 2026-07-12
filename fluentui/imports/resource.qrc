@@ -97,8 +97,6 @@
         <file>FluentUI/Controls/FluImageButton.qml</file>
         <file>FluentUI/Controls/FluSplitLayout.qml</file>
         <file>FluentUI/Controls/FluWindowDialog.qml</file>
-        <file>FluentUI/i18n/FluentUI_en_US.qm</file>
-        <file>FluentUI/i18n/FluentUI_zh_CN.qm</file>
         <file>FluentUI/Controls/FluLauncher.qml</file>
         <file>FluentUI/Controls/FluRouter.qml</file>
         <file>FluentUI/Controls/FluWindowResultLauncher.qml</file>

@@ -20,18 +20,74 @@ QtObject {
     property string ttsLanguage: "en"
     property bool   ttsEnabled: true
 
+    // ── display language ────────────────────────────────────────────────
+    // Controls all on-screen text (NOW SERVING, NEXT UP, Visit our website…).
+    // Independent from ttsLanguage — you can display in French while
+    // announcing in Arabic, or use any combination.
+    // Values: "en" | "fr" | "ar"
+    property string displayLanguage: "en"
+
+    // Translations for every on-screen string, keyed by displayLanguage.
+    readonly property var _tr: ({
+        "en": {
+            now_serving:   "NOW SERVING",
+            next_up:       "NEXT UP",
+            visit_website: "Visit our website",
+            proceed:       "Please proceed to your counter",
+            connecting:    "Connecting…",
+            reconnecting:  "Reconnecting…"
+        },
+        "fr": {
+            now_serving:   "EN SERVICE",
+            next_up:       "PROCHAINS",
+            visit_website: "Visitez notre site",
+            proceed:       "Veuillez vous rendre à votre guichet",
+            connecting:    "Connexion…",
+            reconnecting:  "Reconnexion…"
+        },
+        "ar": {
+            now_serving:   "يُخدَم الآن",
+            next_up:       "التالي",
+            visit_website: "زوروا موقعنا",
+            proceed:       "يرجى التوجه إلى شبابيككم",
+            connecting:    "جارٍ الاتصال…",
+            reconnecting:  "إعادة الاتصال…"
+        }
+    })
+
+    // Convenience accessor — always returns a valid string even if the key
+    // or language is missing.
+    function tr(key) {
+        var lang = _tr[displayLanguage] ? displayLanguage : "en"
+        return _tr[lang][key] || _tr["en"][key] || key
+    }
+
+    // Arabic uses RTL layout. QML items can read this to flip Row directions.
+    readonly property bool isRtl: displayLanguage === "ar"
+
     // ── category ────────────────────────────────────────────────────────
     property string category: "A"
     property string categoryDisplayName: "Category A"
+    // Show/hide the category badge on the display
+    property bool   categoryVisible: true
+    // Announce category name in TTS before the number ("Chicken... 12")
+    property bool   categoryAudioEnabled: true
 
     // ── branding ────────────────────────────────────────────────────────
     property string logoSource:   "qrc:/app/res/image/genical.jpg"
     property string facilityName: "CandyBar Service Centre"
     property string bannerText:   "Welcome — please wait for your number to be called"
     property string backgroundImage: "qrc:/app/res/image/ff_burger_pattern.jpg"
+    // "crop" | "fit" | "stretch" | "auto"
+    property string backgroundFitMode: "crop"
+    property real backgroundScale: 1.0
+    property int backgroundOffsetX: 0
+    property int backgroundOffsetY: 0
     // "landscape" → PreserveAspectCrop normally
     // "portrait"  → rotate 90° then crop to fill (phone wallpapers on a wide screen)
     property string backgroundOrientation: "portrait"
+    property string backgroundType: "image"        // "image" | "video"
+    property string backgroundVideoSource: ""       // url to an mp4 template
     property string logoPosition: "top-left"   // top-left | top-center | hidden
     property bool   bannerEnabled: true
     property bool   logoVisible: true
@@ -81,9 +137,7 @@ QtObject {
 
     function _bgSource(path) {
         if (!path || path.length === 0) return "qrc:/app/res/image/ff_burger_pattern.jpg"
-        // Migrate old dark defaults to the new burger default
-        if (path === "qrc:/app/res/image/0.jpg" ||
-            path === "qrc:/app/res/image/pro_abstract.jpg") {
+        if (path === "qrc:/app/res/image/0.jpg") {
             return "qrc:/app/res/image/ff_burger_pattern.jpg"
         }
         if (path.startsWith("qrc:") || path.startsWith("file://")) return path
@@ -91,12 +145,20 @@ QtObject {
         return path
     }
 
+    function _videoSource(url) {
+        if (!url || url.length === 0) return ""
+        if (url.startsWith("file://") || url.startsWith("http://") || url.startsWith("https://")) return url
+        if (url.startsWith("/")) return publicUrl.replace(/\/$/, "") + url
+        return url
+    }
+
     function _syncAudioEngine() {
         if (typeof AudioEngine === 'undefined') return
-        AudioEngine.muted      = audioMuted
-        AudioEngine.volumeStep = audioVolumeStep
-        AudioEngine.language   = ttsLanguage
-        AudioEngine.ttsEnabled = ttsEnabled
+        AudioEngine.muted                = audioMuted
+        AudioEngine.volumeStep           = audioVolumeStep
+        AudioEngine.language             = ttsLanguage
+        AudioEngine.ttsEnabled           = ttsEnabled
+        AudioEngine.categoryAudioEnabled = categoryAudioEnabled
         AudioEngine.set_category_display_name(categoryDisplayName)
     }
 
@@ -115,6 +177,8 @@ QtObject {
         facilityName          = p.load("facilityName", "CandyBar Service Centre")
         category              = p.load("category", "A")
         categoryDisplayName   = p.load("categoryDisplayName", "Category A")
+        categoryVisible       = p.load("categoryVisible", "true") !== "false"
+        categoryAudioEnabled  = p.load("categoryAudioEnabled", "true") !== "false"
         logoPosition          = p.load("logoPosition", "top-left")
         bannerEnabled         = p.load("bannerEnabled", "true") !== "false"
         logoVisible           = p.load("logoVisible", "true") !== "false"
@@ -125,6 +189,7 @@ QtObject {
         nowServingFont        = p.load("nowServingFont", numberFont)
         ttsLanguage           = p.load("ttsLanguage", "en")
         ttsEnabled            = p.load("ttsEnabled", "true") !== "false"
+        displayLanguage       = p.load("displayLanguage", "en")
         audioMuted            = p.load("audioMuted", "false") === "true"
         audioVolumeStep       = parseInt(p.load("audioVolumeStep", "3")) || 3
         var fs                = parseInt(p.load("fontSize", "96"))
@@ -140,7 +205,13 @@ QtObject {
         if (lp && lp.length > 0)
             logoSource = "file://" + lp
         backgroundImage       = _bgSource(p.load("backgroundImage", "qrc:/app/res/image/ff_burger_pattern.jpg"))
+        backgroundFitMode     = p.load("backgroundFitMode", "crop")
+        backgroundScale       = parseFloat(p.load("backgroundScale", "1.0")) || 1.0
+        backgroundOffsetX     = parseInt(p.load("backgroundOffsetX", "0")) || 0
+        backgroundOffsetY     = parseInt(p.load("backgroundOffsetY", "0")) || 0
         backgroundOrientation = p.load("backgroundOrientation", "portrait")
+        backgroundType        = p.load("backgroundType", "image")
+        backgroundVideoSource = _videoSource(p.load("backgroundVideoSource", ""))
         _syncAudioEngine()
     }
 
@@ -217,9 +288,25 @@ QtObject {
         } else if (key === "backgroundImage") {
             backgroundImage = _bgSource(value)
             p.save("backgroundImage", value.replace("file://", ""))
+        } else if (key === "backgroundFitMode") {
+            backgroundFitMode = value
+            p.save("backgroundFitMode", value)
+        } else if (key === "backgroundScale") {
+            backgroundScale = parseFloat(value) || 1.0
+            p.save("backgroundScale", String(backgroundScale))
+        } else if (key === "backgroundOffsetX") {
+            backgroundOffsetX = parseInt(value) || 0
+            p.save("backgroundOffsetX", String(backgroundOffsetX))
+        } else if (key === "backgroundOffsetY") {
+            backgroundOffsetY = parseInt(value) || 0
+            p.save("backgroundOffsetY", String(backgroundOffsetY))
         } else if (key === "backgroundOrientation") {
             backgroundOrientation = value
             p.save("backgroundOrientation", value)
+        } else if (key === "backgroundType") {
+            backgroundType = value; p.save("backgroundType", value)
+        } else if (key === "backgroundVideoSource") {
+            backgroundVideoSource = _videoSource(value); p.save("backgroundVideoSource", value)
         } else if (key === "adminPin") {
             p.set_pin(value)
         } else if (key === "category") {
@@ -242,6 +329,11 @@ QtObject {
             ttsLanguage = value
             p.save("ttsLanguage", value)
             _syncAudioEngine()
+        } else if (key === "displayLanguage") {
+            if (value === "en" || value === "fr" || value === "ar") {
+                displayLanguage = value
+                p.save("displayLanguage", value)
+            }
         } else if (key === "ttsEnabled") {
             ttsEnabled = value === "true" || value === true
             p.save("ttsEnabled", ttsEnabled ? "true" : "false")

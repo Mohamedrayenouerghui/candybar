@@ -2,61 +2,102 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"/>
+  <meta name="theme-color" content="#0b0d10"/>
   <title>CandyBar Admin</title>
   <link rel="icon" href="/favicon.ico"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
-      --bg:#0b0d10; --s1:rgba(255,255,255,.05); --s2:rgba(255,255,255,.09);
-      --bd:rgba(255,255,255,.11); --acc:#FFB84D;
-      --t1:rgba(255,255,255,.95); --t2:rgba(255,255,255,.52); --t3:rgba(255,255,255,.28);
-      --r:12px; --rc:10px; --fast:100ms; --std:240ms;
+      --bg:#0a0c0e; --s1:rgba(255,255,255,.045); --s2:rgba(255,255,255,.085);
+      --bd:rgba(255,255,255,.10);
+      /* --acc = the DISPLAY's accent color (user-customizable in Theme).
+         --chrome = this admin app's own fixed identity — kept separate so picking
+         a wild accent for the queue display never destabilizes the control UI. */
+      --acc:#FFB84D; --chrome:#3DD9C6; --chrome-ink:#04211d;
+      --t1:rgba(255,255,255,.96); --t2:rgba(255,255,255,.56); --t3:rgba(255,255,255,.32);
+      --danger:#f87171;
+      --r:14px; --rc:11px; --fast:100ms; --std:220ms;
+      --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
     }
     html,body{min-height:100%;background:var(--bg);color:var(--t1);
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:15px}
+      font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+      font-size:15px;-webkit-tap-highlight-color:transparent}
     body::before{content:"";position:fixed;inset:0;
       background:url('/uploads/noise_texture.png') repeat;opacity:.012;pointer-events:none;z-index:0}
     #app{position:relative;z-index:1;max-width:600px;margin:0 auto;
-      padding:16px 16px 100px;display:flex;flex-direction:column;gap:14px}
+      padding:calc(14px + var(--sat)) 16px calc(148px + var(--sab));
+      display:flex;flex-direction:column;gap:12px}
     /* ── header ── */
-    .hdr{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
-    .hdr h1{font-size:17px;font-weight:700;letter-spacing:-.01em}
-    .conn{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t2)}
+    .hdr{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 6px}
+    .hdr h1{font-size:18px;font-weight:800;letter-spacing:-.02em}
+    .hdr .sub{display:block;font-size:11px;font-weight:500;color:var(--t3);letter-spacing:.02em;margin-top:1px}
+    .conn{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--t2);
+      background:var(--s1);border:1px solid var(--bd);padding:6px 10px;border-radius:99px}
     .dot{width:7px;height:7px;border-radius:50%;background:#555;transition:background .3s}
-    .dot.on{background:#22c55e} .dot.off{background:#ef4444}
-    /* ── tabs ── */
-    .tabs{display:flex;background:var(--s1);border:1px solid var(--bd);
-      border-radius:var(--r);padding:5px;gap:4px}
-    .tab{flex:1;background:transparent;border:none;color:var(--t3);padding:11px 0;
-      font-size:13px;font-weight:700;border-radius:var(--rc);cursor:pointer;
-      transition:background var(--fast),color var(--fast),transform var(--fast),
-      box-shadow var(--fast)}
-    .tab:active{transform:scale(.94);opacity:.70}
-    /* Active tab: high contrast — impossible to miss which tab you're on */
-    .tab.on{background:var(--acc);color:#000;box-shadow:0 2px 10px rgba(0,0,0,.35)}
-    .pane{display:flex;flex-direction:column;gap:14px}
+    .dot.on{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+    .dot.off{background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15)}
+    /* ── bottom tab bar (mobile app pattern — thumb reach, always visible) ── */
+    .tabs{position:fixed;left:0;right:0;bottom:0;z-index:110;display:flex;
+      background:rgba(11,13,16,.88);backdrop-filter:blur(16px) saturate(140%);
+      border-top:1px solid var(--bd);padding:6px 10px calc(6px + var(--sab));gap:4px;
+      max-width:600px;margin:0 auto}
+    @media(min-width:632px){ .tabs{border-radius:var(--r) var(--r) 0 0;border-left:1px solid var(--bd);border-right:1px solid var(--bd)} }
+    .tab{flex:1;background:transparent;border:none;color:var(--t3);padding:8px 0 6px;
+      font-size:10.5px;font-weight:700;letter-spacing:.01em;border-radius:var(--rc);cursor:pointer;
+      display:flex;flex-direction:column;align-items:center;gap:3px;
+      transition:background var(--fast),color var(--fast),transform var(--fast)}
+    .tab .ic{font-size:19px;line-height:1}
+    .tab:active{transform:scale(.92)}
+    /* Active tab: unmistakable, uses the app's own fixed chrome color (not the display accent) */
+    .tab.on{color:var(--chrome)}
+    .tab.on .ic{filter:drop-shadow(0 0 10px rgba(61,217,198,.45))}
+    .pane{display:flex;flex-direction:column;gap:12px}
     .pane.hide{display:none!important}
     /* ── card ── */
     .card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);
       padding:16px;display:flex;flex-direction:column;gap:12px}
     .lbl{font-size:10px;letter-spacing:.13em;text-transform:uppercase;
       color:var(--t3);font-weight:700;margin-bottom:2px}
+    /* ── collapsible sections (Theme / Settings) — cut scroll, keep focus ── */
+    .acc-head{width:100%;background:transparent;border:none;padding:0;margin:0;cursor:pointer;
+      display:flex;align-items:center;gap:10px;color:var(--t1);text-align:left}
+    .acc-head .acc-ic{font-size:18px;flex:none;width:26px;text-align:center}
+    .acc-head .acc-t{flex:1;display:flex;flex-direction:column;gap:1px}
+    .acc-head .acc-t b{font-size:14.5px;font-weight:700;letter-spacing:-.01em}
+    .acc-head .acc-t small{font-size:11.5px;color:var(--t3);font-weight:500}
+    .acc-chev{flex:none;font-size:12px;color:var(--t3);transition:transform var(--std)}
+    .card.open .acc-chev{transform:rotate(180deg)}
+    .acc-body{display:flex;flex-direction:column;gap:12px;
+      max-height:0;overflow:hidden;opacity:0;
+      transition:max-height var(--std) ease,opacity var(--std) ease}
+    .card.open .acc-body{max-height:2400px;opacity:1;margin-top:2px}
     /* ── preview miniature ── */
+    .preview-caption{display:flex;align-items:center;gap:6px;font-size:11.5px;
+      color:var(--t3);font-weight:600;padding:0 2px}
+    .dot-live{width:6px;height:6px;border-radius:50%;background:var(--chrome);
+      box-shadow:0 0 0 3px rgba(61,217,198,.16)}
     .prev-wrap{border-radius:var(--r);overflow:hidden;aspect-ratio:16/9;
-      background:#000;border:1px solid var(--bd);position:relative}
+      background:#0d0f12;border:1px solid var(--bd);position:relative;
+      box-shadow:0 6px 24px rgba(0,0,0,.35)}
     .prev-bg{position:absolute;inset:0;background-size:cover;background-position:center;
-      transition:background-image .4s}
-    .prev-overlay{position:absolute;inset:0;background:rgba(0,0,0,.30)}
+      background-repeat:no-repeat;z-index:0;transition:background-image .4s}
+    .prev-bg video{width:100%;height:100%;object-fit:cover}
+    .prev-overlay{position:absolute;inset:0;background:rgba(0,0,0,.30);z-index:1}
     .prev-body{position:absolute;inset:0;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;gap:2px}
+      align-items:center;justify-content:center;gap: 4px;z-index:2}
     .prev-label{font-size:7px;letter-spacing:.12em;text-transform:uppercase;
-      color:rgba(255,255,255,.30)}
+      color:rgba(255,255,255,.65);margin-bottom:2px}
     .prev-cat{font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--acc);
-      text-transform:uppercase}
-    .prev-num{font-family:monospace;font-weight:900;color:#fff;line-height:1;
-      letter-spacing:-.04em;transition:font-size .15s}
-    .prev-bar{height:3px;width:56px;border-radius:2px;background:var(--acc)}
+      text-transform:uppercase;padding:4px 10px;border-radius:6px;background:rgba(0,0,0,.3);
+      border:1px solid rgba(255,255,255,.1)}
+    .prev-num{font-family:'DM Mono',monospace;font-weight:900;color:#fff;line-height:1;
+      letter-spacing:-.02em;transition:font-size .15s;font-size:42px;text-shadow:0 4px 12px rgba(0,0,0,.45)}
+    .prev-bar{height:8px;width:60px;border-radius:4px;background:var(--acc);
+      box-shadow:0 0 12px rgba(255,184,77,.35);margin-bottom:2px}
     .prev-fac{font-size:7px;color:rgba(255,255,255,.22);margin-top:3px}
     /* ── stepper — 56px min tap target ── */
     .stepper{display:flex;border-radius:var(--rc);overflow:hidden;border:1px solid var(--bd)}
@@ -64,8 +105,8 @@
       color:var(--t1);cursor:pointer;
       transition:background var(--fast),transform var(--fast),opacity var(--fast)}
     .step-btn:active{transform:scale(.94);opacity:.70;background:var(--s2)}
-    .step-num{flex:1;height:64px;background:var(--s2);font-family:monospace;font-size:26px;
-      font-weight:600;color:var(--t1);border:none;text-align:center;outline:none}
+    .step-num{flex:1;height:64px;background:var(--s2);font-family:'DM Mono',monospace;font-size:28px;
+      font-weight:500;color:var(--t1);border:none;text-align:center;outline:none}
     /* ── btn group ── */
     .grp{display:flex;gap:6px}
     .gi{flex:1;padding:12px 0;background:var(--s1);border:1px solid var(--bd);
@@ -74,50 +115,55 @@
       transition:border-color var(--fast),color var(--fast),background var(--fast),
       transform var(--fast),opacity var(--fast)}
     .gi:active{transform:scale(.94);opacity:.70}
-    .gi.on{border-color:var(--acc);color:var(--t1);background:var(--s2)}
+    .gi.on{border-color:var(--chrome);color:var(--t1);background:var(--s2)}
+    .gi.save-btn{background:var(--chrome);color:var(--chrome-ink);border-color:var(--chrome);
+      font-size:13.5px;font-weight:800;padding:13px 0}
     /* ── inputs ── */
     input[type=text],input[type=password],textarea,select{
       width:100%;background:var(--s1);border:1px solid var(--bd);border-radius:var(--rc);
       color:var(--t1);padding:11px 13px;font-size:14px;font-family:inherit;outline:none;
       transition:border-color .2s}
-    input:focus,textarea:focus,select:focus{border-color:var(--acc)}
+    input:focus,textarea:focus,select:focus{border-color:var(--chrome)}
     textarea{resize:vertical;min-height:60px}
     /* ── slider — touch-friendly ── */
     .slider-row{display:flex;flex-direction:column;gap:6px}
     .slider-header{display:flex;justify-content:space-between;align-items:baseline}
     .slider-lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;
       color:var(--t3);font-weight:700}
-    .slider-val{font-size:14px;font-weight:700;color:var(--acc);font-family:monospace}
+    .slider-val{font-size:14px;font-weight:700;color:var(--chrome);font-family:'DM Mono',monospace}
+    .hint-txt{font-size:11.5px;color:var(--t3);line-height:1.4}
     input[type=range]{
       -webkit-appearance:none;appearance:none;width:100%;height:28px;
       background:transparent;cursor:pointer;padding:0}
     input[type=range]::-webkit-slider-runnable-track{
       height:6px;border-radius:3px;background:var(--s2);border:1px solid var(--bd)}
     input[type=range]::-webkit-slider-thumb{
-      -webkit-appearance:none;width:28px;height:28px;border-radius:50%;
-      background:var(--acc);margin-top:-11px;border:2px solid rgba(0,0,0,.3);
+      -webkit-appearance:none;width:26px;height:26px;border-radius:50%;
+      background:var(--chrome);margin-top:-10px;border:3px solid var(--bg);
       box-shadow:0 2px 8px rgba(0,0,0,.4)}
     input[type=range]::-moz-range-track{
       height:6px;border-radius:3px;background:var(--s2);border:1px solid var(--bd)}
     input[type=range]::-moz-range-thumb{
-      width:28px;height:28px;border-radius:50%;background:var(--acc);
-      border:2px solid rgba(0,0,0,.3);box-shadow:0 2px 8px rgba(0,0,0,.4)}
-    /* ── sticky apply bar ── */
-    .sticky-apply{position:fixed;bottom:0;left:0;right:0;z-index:100;
-      background:rgba(11,13,16,.92);backdrop-filter:blur(12px);
-      border-top:1px solid var(--bd);padding:12px 16px;
-      display:flex;gap:10px;align-items:center;max-width:600px;margin:0 auto}
-    /* sticky-apply is centred: need to fix left/right relative to viewport */
-    @media(min-width:632px){
-      .sticky-apply{left:50%;right:auto;transform:translateX(-50%);width:600px;border-radius:var(--r) var(--r) 0 0}
-    }
-    .apply{flex:1;padding:15px;border:none;border-radius:var(--rc);
-      background:var(--acc);color:#000;font-size:15px;font-weight:800;cursor:pointer;
-      transition:transform var(--fast),opacity var(--fast)}
-    .apply:active{transform:scale(.94);opacity:.70}
-    .apply-confirm{flex:none;font-size:13px;font-weight:700;color:#22c55e;
-      opacity:0;transition:opacity .3s;white-space:nowrap}
+      width:26px;height:26px;border-radius:50%;background:var(--chrome);
+      border:3px solid var(--bg);box-shadow:0 2px 8px rgba(0,0,0,.4)}
+    /* ── sticky apply bar — floats just above the bottom tab bar ── */
+    .sticky-apply{position:fixed;left:0;right:0;
+      bottom:calc(58px + var(--sab));z-index:105;
+      padding:0 16px;max-width:600px;margin:0 auto;
+      display:flex;justify-content:center;
+      transition:transform var(--std) ease,opacity var(--std) ease}
+    .sticky-apply.hide{transform:translateY(16px);opacity:0;pointer-events:none}
+    .sticky-apply-inner{width:100%;background:rgba(18,20,23,.94);backdrop-filter:blur(14px);
+      border:1px solid var(--bd);border-radius:99px;padding:6px 6px 6px 18px;
+      display:flex;gap:10px;align-items:center;box-shadow:0 8px 28px rgba(0,0,0,.45)}
+    .apply-confirm{flex:1;font-size:13px;font-weight:700;color:#22c55e;
+      opacity:0;transition:opacity .3s;white-space:nowrap;text-align:right;padding-right:2px}
     .apply-confirm.show{opacity:1}
+    .apply{flex:none;padding:13px 22px;border:none;border-radius:99px;
+      background:var(--chrome);color:var(--chrome-ink);font-size:14px;font-weight:800;cursor:pointer;
+      white-space:nowrap;
+      transition:transform var(--fast),opacity var(--fast)}
+    .apply:active{transform:scale(.94);opacity:.85}
     /* ── template grid ── */
     .tpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .tpl-card{border-radius:var(--rc);overflow:hidden;cursor:pointer;position:relative;
@@ -139,6 +185,7 @@
     .bg-btn:active{transform:scale(.93);opacity:.70}
     .bg-btn.on{border-color:var(--acc)}
     .bg-btn img{width:100%;height:100%;object-fit:cover;display:block}
+    .bg-btn video{width:100%;height:100%;object-fit:cover;display:block}
     .bg-label{position:absolute;bottom:0;left:0;right:0;font-size:8px;
       color:rgba(255,255,255,.85);background:rgba(0,0,0,.5);
       padding:3px 0;text-align:center}
@@ -193,17 +240,37 @@
       transform var(--fast),opacity var(--fast);background:transparent;color:var(--t2)}
     .bg-tab:active{transform:scale(.94);opacity:.70}
     .bg-tab.on{background:var(--acc);color:#000}
+    /* ── loading overlay ── */
+    #loading-overlay{position:fixed;inset:0;background:var(--bg);z-index:9999;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:16px;transition:opacity .3s ease;}
+    #loading-overlay.hide{opacity:0;pointer-events:none;}
+    .loader{width:48px;height:48px;border:4px solid var(--s2);
+      border-top-color:var(--chrome);border-radius:50%;
+      animation:spin 1s linear infinite;}
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .loading-text{color:var(--t2);font-size:14px;font-weight:500;}
+    /* ── action loading state for buttons/inputs */
+    .loading-btn{opacity:.6;cursor:pointer-events:none;}
+    .loading-btn::after{content:"..."}
   </style>
 </head>
 <body>
+<div id="loading-overlay">
+  <div class="loader"></div>
+  <div class="loading-text">Loading CandyBar Admin...</div>
+</div>
 <div id="app">
   <!-- header -->
   <div class="hdr">
-    <h1>CandyBar Display</h1>
+    <h1>CandyBar<span class="sub">Queue display control</span></h1>
     <div class="conn"><div class="dot off" id="dot"></div><span id="conn_lbl">HTTP only</span></div>
   </div>
 
   <!-- live preview miniature -->
+  <div class="preview-caption">
+    <span class="dot-live"></span>Live preview — updates as you make changes
+  </div>
   <div class="prev-wrap">
     <div class="prev-bg" id="prev_bg"></div>
     <div class="prev-overlay"></div>
@@ -214,13 +281,6 @@
       <div class="prev-bar" id="prev_bar"></div>
       <div class="prev-fac" id="prev_fac"></div>
     </div>
-  </div>
-
-  <!-- tabs — active one is visually unmistakable (gold background, black text) -->
-  <div class="tabs">
-    <button class="tab on" id="t_remote"   onclick="tab('remote')">🎛 Remote</button>
-    <button class="tab"    id="t_settings" onclick="tab('settings')">⚙ Settings</button>
-    <button class="tab"    id="t_theme"    onclick="tab('theme')">🎨 Theme</button>
   </div>
 
   <!-- ══════════════════════════════════════════════════════════════
@@ -262,52 +322,138 @@
        SETTINGS TAB
   ══════════════════════════════════════════════════════════════ -->
   <div class="pane hide" id="p_settings">
-    <div class="card" style="gap:10px">
-      <div class="lbl">Category</div>
-      <input type="text" id="cat_id"   placeholder="A"         maxlength="10"/>
-      <input type="text" id="cat_name" placeholder="Category A"/>
-      <button class="apply" style="position:static" onclick="saveCategory()">Save Category</button>
-    </div>
-    <div class="card" style="gap:10px">
-      <div class="lbl">General</div>
-      <input type="text" id="facility" placeholder="Facility name"/>
-      <textarea id="banner" rows="2" placeholder="Banner message…"></textarea>
-      <button class="apply" style="position:static" onclick="saveGeneral()">Save</button>
-    </div>
-    <div class="card" style="gap:10px">
-      <div class="lbl">Text-to-Speech</div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:14px;font-weight:500">Speech Announcements</span>
-        <button id="tts_btn" class="gi on" style="flex:none;padding:12px 28px"
-                onclick="toggleTts()">Enabled</button>
-      </div>
-      <select id="tts_lang" onchange="pub('ttsLanguage',this.value)">
-        <option value="en">English</option>
-        <option value="fr">French</option>
-        <option value="ar">Arabic</option>
-      </select>
-    </div>
-    <div class="card" style="gap:10px">
-      <div class="lbl">Change PIN</div>
-      <div style="display:flex;gap:8px">
-        <input type="password" id="new_pin" placeholder="New 4-digit PIN"
-               maxlength="4" inputmode="numeric" style="flex:1"/>
-        <button class="gi" style="flex:none;padding:14px 18px" onclick="changePin()">Save</button>
+
+    <div class="card open">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">🏷</span>
+        <span class="acc-t"><b>Category</b><small id="cat_summary">Category A · A</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body" style="gap:10px">
+        <div class="slider-row" style="gap:4px">
+          <span class="slider-lbl">Short code</span>
+          <input type="text" id="cat_id" placeholder="A" maxlength="10"/>
+        </div>
+        <div class="slider-row" style="gap:4px">
+          <span class="slider-lbl">Display name</span>
+          <input type="text" id="cat_name" placeholder="Category A"/>
+        </div>
+        <button class="gi save-btn" onclick="saveCategory()">Save category</button>
       </div>
     </div>
+
     <div class="card">
-      <div class="lbl">Device Status</div>
-      <div class="stats">
-        <div class="stat"><div class="stat-l">Uptime</div>
-          <div class="stat-v" id="s_up">—</div></div>
-        <div class="stat"><div class="stat-l">Sessions</div>
-          <div class="stat-v" id="s_sess">—</div></div>
-        <div class="stat"><div class="stat-l">Number Changes</div>
-          <div class="stat-v" id="s_chg">—</div></div>
-        <div class="stat"><div class="stat-l">Last Restart</div>
-          <div class="stat-v" id="s_rst">—</div></div>
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">🏢</span>
+        <span class="acc-t"><b>Facility &amp; banner</b><small>Name and scrolling message</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body" style="gap:10px">
+        <div class="slider-row" style="gap:4px">
+          <span class="slider-lbl">Facility name</span>
+          <input type="text" id="facility" placeholder="Facility name"/>
+        </div>
+        <div class="slider-row" style="gap:4px">
+          <span class="slider-lbl">Banner message</span>
+          <textarea id="banner" rows="2" placeholder="Banner message…"></textarea>
+        </div>
+        <button class="gi save-btn" onclick="saveGeneral()">Save</button>
       </div>
     </div>
+
+    <div class="card">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">🔊</span>
+        <span class="acc-t"><b>Text-to-speech</b><small id="tts_summary">Enabled · English</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body" style="gap:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:14px;font-weight:500">Speech announcements</span>
+          <button id="tts_btn" class="gi on" style="flex:none;padding:12px 28px"
+                  onclick="toggleTts()">Enabled</button>
+        </div>
+        <div class="slider-row" style="gap:4px">
+          <span class="slider-lbl">Language</span>
+          <select id="tts_lang" onchange="pub('ttsLanguage',this.value);updateTtsSummary()">
+            <option value="en">English</option>
+            <option value="fr">French</option>
+            <option value="ar">Arabic</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Display language (on-screen text: NOW SERVING, NEXT UP…) ── -->
+    <div class="card">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">🌐</span>
+        <span class="acc-t"><b data-i18n="display_language_title">Display language</b><small id="disp_lang_summary">English</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body" style="gap:10px">
+        <div class="hint-txt" data-i18n="display_language_hint">
+          Controls what language appears on the screen — NOW SERVING, NEXT UP, etc. Independent from TTS voice language.
+        </div>
+        <div class="grp" id="disp_lang_grp">
+          <button class="gi on" id="dl_en" data-lang="en" onclick="setDisplayLanguage('en')">🇬🇧 English</button>
+          <button class="gi"    id="dl_fr" data-lang="fr" onclick="setDisplayLanguage('fr')">🇫🇷 Français</button>
+          <button class="gi"    id="dl_ar" data-lang="ar" onclick="setDisplayLanguage('ar')">🇸🇦 العربية</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Admin panel language (this UI itself) ── -->
+    <div class="card">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">🛠</span>
+        <span class="acc-t"><b data-i18n="admin_lang_title">Admin panel language</b><small data-i18n="admin_lang_sub">Language of this control panel</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body" style="gap:10px">
+        <div class="grp" id="admin_lang_grp">
+          <button class="gi on" id="al_en" data-lang="en" onclick="setAdminLang('en')">🇬🇧 English</button>
+          <button class="gi"    id="al_fr" data-lang="fr" onclick="setAdminLang('fr')">🇫🇷 Français</button>
+          <button class="gi"    id="al_ar" data-lang="ar" onclick="setAdminLang('ar')">🇸🇦 العربية</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">🔒</span>
+        <span class="acc-t"><b>Admin PIN</b><small>4-digit code to unlock this panel</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body">
+        <div style="display:flex;gap:8px">
+          <input type="password" id="new_pin" placeholder="New 4-digit PIN"
+                 maxlength="4" inputmode="numeric" style="flex:1"/>
+          <button class="gi" style="flex:none;padding:14px 18px" onclick="changePin()">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">📶</span>
+        <span class="acc-t"><b>Device status</b><small>Uptime, sessions &amp; activity</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body">
+        <div class="stats">
+          <div class="stat"><div class="stat-l">Uptime</div>
+            <div class="stat-v" id="s_up">—</div></div>
+          <div class="stat"><div class="stat-l">Sessions</div>
+            <div class="stat-v" id="s_sess">—</div></div>
+          <div class="stat"><div class="stat-l">Number Changes</div>
+            <div class="stat-v" id="s_chg">—</div></div>
+          <div class="stat"><div class="stat-l">Last Restart</div>
+            <div class="stat-v" id="s_rst">—</div></div>
+        </div>
+      </div>
+    </div>
+
   </div>
   <!-- ══════════════════════════════════════════════════════════════
        THEME TAB
@@ -315,110 +461,208 @@
   <div class="pane hide" id="p_theme">
 
     <!-- Templates -->
-    <div class="card">
-      <div class="lbl">Ready-made Templates</div>
-      <div class="sep" style="margin-bottom:8px">🍔 Fast Food</div>
-      <div class="tpl-grid" id="tpl_ff"></div>
-      <div class="sep" style="margin:10px 0 8px">💼 Professional</div>
-      <div class="tpl-grid" id="tpl_pro"></div>
+    <div class="card open">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">✨</span>
+        <span class="acc-t"><b>Ready-made templates</b><small>One tap sets colors, background &amp; font</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body">
+        <div class="sep" style="margin-bottom:8px">🍔 Fast Food</div>
+        <div class="tpl-grid" id="tpl_ff"></div>
+        <div class="sep" style="margin:10px 0 8px">💼 Professional</div>
+        <div class="tpl-grid" id="tpl_pro"></div>
+      </div>
     </div>
 
     <!-- Layout -->
     <div class="card">
-      <div class="lbl">Display Layout</div>
-      <div class="lay-grid">
-        <div class="lay-thumb on" id="lay_Classic" onclick="setLayout('Classic')">
-          <svg width="48" height="30" viewBox="0 0 48 30" fill="none">
-            <rect width="48" height="30" rx="3" fill="rgba(255,255,255,.05)"/>
-            <rect x="4" y="4" width="40" height="5" rx="2" fill="rgba(255,255,255,.18)"/>
-            <rect x="14" y="11" width="20" height="10" rx="2" fill="rgba(255,255,255,.30)"/>
-            <rect x="4" y="23" width="40" height="4" rx="2" fill="rgba(255,255,255,.12)"/>
-          </svg><span>Classic</span>
-        </div>
-        <div class="lay-thumb" id="lay_Split" onclick="setLayout('Split')">
-          <svg width="48" height="30" viewBox="0 0 48 30" fill="none">
-            <rect width="48" height="30" rx="3" fill="rgba(255,255,255,.05)"/>
-            <rect x="0" y="0" width="27" height="30" rx="3" fill="rgba(255,255,255,.10)"/>
-            <rect x="8" y="10" width="12" height="10" rx="2" fill="rgba(255,255,255,.35)"/>
-            <rect x="30" y="6" width="13" height="3" rx="1" fill="rgba(255,255,255,.20)"/>
-            <rect x="30" y="11" width="10" height="3" rx="1" fill="rgba(255,255,255,.14)"/>
-            <rect x="30" y="16" width="8" height="3" rx="1" fill="rgba(255,255,255,.09)"/>
-          </svg><span>Split</span>
-        </div>
-        <div class="lay-thumb" id="lay_Centered" onclick="setLayout('Centered')">
-          <svg width="48" height="30" viewBox="0 0 48 30" fill="none">
-            <rect width="48" height="30" rx="3" fill="rgba(255,255,255,.05)"/>
-            <rect x="20" y="3" width="8" height="8" rx="2" fill="rgba(255,255,255,.18)"/>
-            <rect x="10" y="13" width="28" height="10" rx="2" fill="rgba(255,255,255,.30)"/>
-            <rect x="16" y="25" width="16" height="3" rx="1" fill="rgba(255,255,255,.14)"/>
-          </svg><span>Centered</span>
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">▦</span>
+        <span class="acc-t"><b>Layout</b><small id="layout_summary">Classic</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body">
+        <div class="lay-grid">
+          <div class="lay-thumb on" id="lay_Classic" onclick="setLayout('Classic')">
+            <svg width="48" height="30" viewBox="0 0 48 30" fill="none">
+              <rect width="48" height="30" rx="3" fill="rgba(255,255,255,.05)"/>
+              <rect x="4" y="4" width="40" height="5" rx="2" fill="rgba(255,255,255,.18)"/>
+              <rect x="14" y="11" width="20" height="10" rx="2" fill="rgba(255,255,255,.30)"/>
+              <rect x="4" y="23" width="40" height="4" rx="2" fill="rgba(255,255,255,.12)"/>
+            </svg><span>Classic</span>
+          </div>
+          <div class="lay-thumb" id="lay_Split" onclick="setLayout('Split')">
+            <svg width="48" height="30" viewBox="0 0 48 30" fill="none">
+              <rect width="48" height="30" rx="3" fill="rgba(255,255,255,.05)"/>
+              <rect x="0" y="0" width="27" height="30" rx="3" fill="rgba(255,255,255,.10)"/>
+              <rect x="8" y="10" width="12" height="10" rx="2" fill="rgba(255,255,255,.35)"/>
+              <rect x="30" y="6" width="13" height="3" rx="1" fill="rgba(255,255,255,.20)"/>
+              <rect x="30" y="11" width="10" height="3" rx="1" fill="rgba(255,255,255,.14)"/>
+              <rect x="30" y="16" width="8" height="3" rx="1" fill="rgba(255,255,255,.09)"/>
+            </svg><span>Split</span>
+          </div>
+          <div class="lay-thumb" id="lay_Centered" onclick="setLayout('Centered')">
+            <svg width="48" height="30" viewBox="0 0 48 30" fill="none">
+              <rect width="48" height="30" rx="3" fill="rgba(255,255,255,.05)"/>
+              <rect x="20" y="3" width="8" height="8" rx="2" fill="rgba(255,255,255,.18)"/>
+              <rect x="10" y="13" width="28" height="10" rx="2" fill="rgba(255,255,255,.30)"/>
+              <rect x="16" y="25" width="16" height="3" rx="1" fill="rgba(255,255,255,.14)"/>
+            </svg><span>Centered</span>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Accent color -->
-    <div class="card" style="gap:10px">
-      <div class="lbl">Accent Color</div>
-      <canvas id="color_canvas" width="300" height="140"></canvas>
-      <input type="range" class="hue-range" id="hue_slider" min="0" max="360"
-             value="30" oninput="updateHue(this.value)"/>
-      <input type="text" id="color_hex" placeholder="#FFB84D" maxlength="7"
-             oninput="updateHex(this.value)"/>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:14px;font-weight:500">Gradient on accent bar</span>
-        <button id="grad_btn" class="gi" style="flex:none;padding:12px 24px"
-                onclick="toggleGrad()">Off</button>
+    <div class="card">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic" id="acc_swatch" style="border-radius:50%;background:var(--acc);width:20px;height:20px;margin:auto"></span>
+        <span class="acc-t"><b>Accent color</b><small>Highlights the number &amp; category</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body" style="gap:10px">
+        <canvas id="color_canvas" width="300" height="140"></canvas>
+        <input type="range" class="hue-range" id="hue_slider" min="0" max="360"
+               value="30" oninput="updateHue(this.value)"/>
+        <input type="text" id="color_hex" placeholder="#FFB84D" maxlength="7"
+               oninput="updateHex(this.value)"/>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:14px;font-weight:500">Gradient on accent bar</span>
+          <button id="grad_btn" class="gi" style="flex:none;padding:12px 24px"
+                  onclick="toggleGrad()">Off</button>
+        </div>
       </div>
     </div>
 
-    <!-- Background -->
-    <div class="card" style="gap:10px">
-      <div class="lbl">Background</div>
-      <div class="bg-tabs">
-        <button class="bg-tab on" id="bg_t_pro" onclick="bgTab('pro')">💼 Professional</button>
-        <button class="bg-tab"    id="bg_t_ff"  onclick="bgTab('ff')">🍔 Fast Food</button>
+    <!-- Animated Backgrounds -->
+    <div class="card">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">🎬</span>
+        <span class="acc-t"><b>Animated Backgrounds</b><small>Choose a looping video background</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body" style="gap:12px">
+        <div class="bg-tabs" style="margin-bottom:8px">
+          <button class="bg-tab on" id="bg_v_t_pro" onclick="bgVideoTab('pro')">💼 Professional</button>
+          <button class="bg-tab" id="bg_v_t_ff" onclick="bgVideoTab('ff')">🍔 Fast Food</button>
+        </div>
+        <div class="bg-grid" id="bg_video_grid_pro"></div>
+        <div class="bg-grid hide" id="bg_video_grid_ff"></div>
       </div>
-      <div class="bg-grid" id="bg_grid_pro"></div>
-      <div class="bg-grid hide" id="bg_grid_ff"></div>
-      <div id="bg_sel_lbl" style="font-size:11px;color:var(--t2);text-align:center;min-height:14px"></div>
-      <label class="upload" for="bg_file">
-        <div class="upload-hint" id="bg_hint">📁 Upload custom background (JPG/PNG, max 5 MB)</div>
-        <img id="bg_prev" src="" style="display:none;max-height:56px;border-radius:6px"/>
-      </label>
-      <input type="file" id="bg_file" accept=".png,.jpg,.jpeg"
-             style="display:none" onchange="uploadBg(this)"/>
-      <button class="gi"
-              style="background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.3);color:#f87171"
-              onclick="removeBg()">Remove custom background</button>
+    </div>
+
+    <!-- Static Backgrounds -->
+    <div class="card">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">🖼</span>
+        <span class="acc-t"><b>Static Backgrounds</b><small>Choose an image background</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body" style="gap:12px">
+        <div class="bg-tabs">
+          <button class="bg-tab on" id="bg_t_pro" onclick="bgTab('pro')">💼 Professional</button>
+          <button class="bg-tab" id="bg_t_ff" onclick="bgTab('ff')">🍔 Fast Food</button>
+        </div>
+        <div class="bg-grid" id="bg_grid_pro"></div>
+        <div class="bg-grid hide" id="bg_grid_ff"></div>
+      </div>
+    </div>
+
+    <!-- Upload & Adjust Background -->
+    <div class="card">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">📁</span>
+        <span class="acc-t"><b>Upload &amp; Adjust</b><small>Upload custom background or adjust fit</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body" style="gap:12px">
+        <label class="upload" for="bg_file">
+          <div class="upload-hint" id="bg_hint">📁 Upload custom background (JPG/PNG, max 5 MB)</div>
+          <img id="bg_prev" src="" style="display:none;max-height:100px;border-radius:6px"/>
+        </label>
+        <input type="file" id="bg_file" accept=".png,.jpg,.jpeg"
+               style="display:none" onchange="uploadBg(this)"/>
+        <button class="gi"
+                style="background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.28);color:var(--danger)"
+                onclick="removeBg()">Remove custom background</button>
+
+        <div class="sep" style="margin:12px 0 4px">Adjustments</div>
+        <div id="bg_sel_lbl" style="font-size:11px;color:var(--t2);text-align:center;min-height:14px"></div>
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-lbl">Fit mode</span>
+          </div>
+          <select id="bg_fit_mode" onchange="setBgFitMode(this.value)">
+            <option value="crop">Crop</option>
+            <option value="fit">Fit</option>
+            <option value="stretch">Stretch</option>
+            <option value="auto">Auto</option>
+          </select>
+        </div>
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-lbl">Zoom</span>
+            <span class="slider-val" id="bg_zoom_val">100%</span>
+          </div>
+          <input type="range" id="bg_zoom_slider" min="50" max="200" step="1" value="100" oninput="onBgZoom(this.value)"/>
+        </div>
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-lbl">Move X</span>
+            <span class="slider-val" id="bg_move_x_val">0px</span>
+          </div>
+          <input type="range" id="bg_move_x_slider" min="-200" max="200" step="1" value="0" oninput="onBgMoveX(this.value)"/>
+        </div>
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-lbl">Move Y</span>
+            <span class="slider-val" id="bg_move_y_val">0px</span>
+          </div>
+          <input type="range" id="bg_move_y_slider" min="-200" max="200" step="1" value="0" oninput="onBgMoveY(this.value)"/>
+        </div>
+        <button class="gi" onclick="resetBgAdjust()">↺ Reset position</button>
+      </div>
     </div>
 
     <!-- Logo -->
-    <div class="card" style="gap:12px">
-      <div class="lbl">Logo</div>
-      <label class="upload" for="logo_file">
-        <img id="logo_prev" src="" style="display:none"/>
-        <div class="upload-hint" id="logo_hint">📁 Tap to upload logo (PNG/JPG/SVG, max 2 MB)</div>
-      </label>
-      <input type="file" id="logo_file" accept=".png,.jpg,.jpeg,.svg"
-             style="display:none" onchange="uploadLogo(this)"/>
-      <div>
-        <div class="lbl" style="margin-bottom:6px">Logo Position</div>
-        <select id="logo_pos" onchange="pub('logoPosition',this.value)">
-          <option value="top-left">Top Left</option>
-          <option value="top-center">Top Center</option>
-          <option value="hidden">Hidden</option>
-        </select>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="lbl" style="margin:0">Logo Visibility</span>
-        <button id="logo_visible_btn" class="gi on" style="flex:none;padding:12px 22px"
-                onclick="toggleLogoVisibility()">Visible</button>
+    <div class="card">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">🔖</span>
+        <span class="acc-t"><b>Logo</b><small id="logo_summary">No logo uploaded</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body" style="gap:12px">
+        <label class="upload" for="logo_file">
+          <img id="logo_prev" src="" style="display:none"/>
+          <div class="upload-hint" id="logo_hint">📁 Tap to upload logo (PNG/JPG/SVG, max 2 MB)</div>
+        </label>
+        <input type="file" id="logo_file" accept=".png,.jpg,.jpeg,.svg"
+               style="display:none" onchange="uploadLogo(this)"/>
+        <div class="slider-row" style="gap:4px">
+          <span class="slider-lbl">Position</span>
+          <select id="logo_pos" onchange="pub('logoPosition',this.value)">
+            <option value="top-left">Top Left</option>
+            <option value="top-center">Top Center</option>
+            <option value="hidden">Hidden</option>
+          </select>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:14px;font-weight:500">Visibility</span>
+          <button id="logo_visible_btn" class="gi on" style="flex:none;padding:12px 22px"
+                  onclick="toggleLogoVisibility()">Visible</button>
+        </div>
       </div>
     </div>
 
     <!-- Font size slider -->
-    <div class="card" style="gap:10px">
-      <div class="lbl">Typography &amp; Size</div>
+    <div class="card">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">Aa</span>
+        <span class="acc-t"><b>Typography &amp; size</b><small>Font family and size for every element</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body" style="gap:10px">
 
       <div class="slider-row">
         <div class="slider-header">
@@ -427,7 +671,10 @@
         </div>
         <input type="range" id="fs_slider" min="48" max="200" step="1" value="96"
                oninput="onFsSlider(this.value)"/>
+        <div class="hint-txt">Scales the queue number as a whole. Use the overrides below to fine-tune individual elements.</div>
       </div>
+
+      <div class="sep" style="margin:2px 0 -2px">Individual overrides</div>
 
       <div class="slider-row">
         <div class="slider-header">
@@ -520,26 +767,32 @@
       </label>
       <input type="file" id="font_file" accept=".ttf,.otf"
              style="display:none" onchange="uploadFont(this)"/>
+      </div>
     </div>
 
-    <!-- Banner toggle -->
-    <div class="card" style="gap:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span class="lbl" style="margin:0">Footer Banner</span>
-        <button id="banner_btn" class="gi on" style="flex:none;padding:12px 22px"
-                onclick="toggleBanner()">Visible</button>
-      </div>
+    <!-- Banner toggle (single control — no body to expand, so it's a plain row) -->
+    <div class="card" style="flex-direction:row;align-items:center;gap:10px">
+      <span class="acc-ic" style="flex:none">📣</span>
+      <span class="acc-t" style="flex:1;display:flex;flex-direction:column;gap:1px">
+        <b style="font-size:14.5px;font-weight:700">Footer banner</b>
+        <small style="font-size:11.5px;color:var(--t3);font-weight:500">Show the scrolling message on-screen</small>
+      </span>
+      <button id="banner_btn" class="gi on" style="flex:none;padding:10px 18px;width:auto"
+              onclick="toggleBanner()">Visible</button>
     </div>
 
   </div><!-- end theme pane -->
 
 </div><!-- end #app -->
 
-<!-- Sticky apply bar — always visible at bottom, never scrolled off screen -->
-<div class="sticky-apply" id="sticky_bar">
-  <button class="apply" id="apply_btn" onclick="applyPending()">Apply to Display</button>
-  <span class="apply-confirm" id="apply_confirm">Applied ✓</span>
-</div>
+<!-- Live updates are sent immediately while editing -->
+
+<!-- Bottom tab bar — thumb-reachable, fixed, always visible on a phone -->
+<nav class="tabs">
+  <button class="tab on" id="t_remote"   onclick="tab('remote')"><span class="ic">🎛</span>Remote</button>
+  <button class="tab"    id="t_settings" onclick="tab('settings')"><span class="ic">⚙</span>Settings</button>
+  <button class="tab"    id="t_theme"    onclick="tab('theme')"><span class="ic">🎨</span>Theme</button>
+</nav>
 
 <style id="dyn_fonts"></style>
 <script>
@@ -553,6 +806,7 @@ let gradOn = false, currentHue = 30, currentSat = 100, currentVal = 100;
 let isDragging = false, pickerCanvas, pickerCtx;
 let _confirmT;
 let logoVisible = true;
+let bgScale = 1.0, bgOffsetX = 0, bgOffsetY = 0;
 // Pending slider values — only sent on Apply press
 let _pendingFs = null, _pendingLs = null;
 // Current display values (from /api/state)
@@ -563,52 +817,71 @@ let _curFs = 96, _curLs = 48;
 ════════════════════════════════════════════════════════ */
 const BG = {
   pro: [
-    { id:'pro_abstract',        label:'Abstract',      ori:'landscape' },
-    { id:'pro_geometric',       label:'Geometric',     ori:'landscape' },
-    { id:'pro_orange_gradient', label:'Orange Glow',   ori:'portrait'  },
-    { id:'pro_purple_waves',    label:'Purple Waves',  ori:'portrait'  },
-    { id:'pro_blue_gradient',   label:'Blue Frost',    ori:'portrait'  },
-    { id:'pro_pink_gradient',   label:'Pink Gradient', ori:'portrait'  },
+    { id:'pro_abstract',        label:'Abstract',      ori:'landscape', fit:'fit' },
+    { id:'pro_geometric',       label:'Geometric',     ori:'landscape', fit:'crop' },
+    { id:'pro_orange_gradient', label:'Orange Glow',   ori:'portrait',  fit:'crop' },
+    { id:'pro_purple_waves',    label:'Purple Waves',  ori:'portrait',  fit:'crop' },
+    { id:'pro_blue_gradient',   label:'Blue Frost',    ori:'portrait',  fit:'crop' },
+    { id:'pro_pink_gradient',   label:'Pink Gradient', ori:'portrait',  fit:'crop' },
   ],
   ff: [
-    { id:'ff_red_checker',    label:'Red Checker',    ori:'portrait' },
-    { id:'ff_orange_organic', label:'Coral Swirls',   ori:'portrait' },
-    { id:'ff_green_leaves',   label:'Fresh Leaves',   ori:'portrait' },
-    { id:'ff_red_waves',      label:'Red Waves',      ori:'portrait' },
-    { id:'ff_burger_pattern', label:'Burger Pattern', ori:'portrait' },
+    { id:'ff_red_checker',    label:'Red Checker',    ori:'portrait', fit:'crop' },
+    { id:'ff_orange_organic', label:'Coral Swirls',   ori:'portrait', fit:'fit' },
+    { id:'ff_green_leaves',   label:'Fresh Leaves',   ori:'portrait', fit:'crop' },
+    { id:'ff_red_waves',      label:'Red Waves',      ori:'portrait', fit:'crop' },
+    { id:'ff_burger_pattern', label:'Burger Pattern', ori:'portrait', fit:'crop' },
   ],
 };
 const TPLS = [
-  { id:'burger',       cat:'ff',  label:'Burger Joint',    acc:'#E8372A', bg:'ff_burger_pattern',  ori:'portrait'  },
-  { id:'checker',      cat:'ff',  label:'Red Checker',     acc:'#D32F2F', bg:'ff_red_checker',     ori:'portrait'  },
-  { id:'coral',        cat:'ff',  label:'Coral Energy',    acc:'#FF5722', bg:'ff_orange_organic',  ori:'portrait'  },
-  { id:'fresh',        cat:'ff',  label:'Fresh &amp; Clean',acc:'#4CAF50', bg:'ff_green_leaves',    ori:'portrait'  },
-  { id:'abstract',     cat:'pro', label:'Abstract Pro',    acc:'#9C27B0', bg:'pro_abstract',       ori:'landscape' },
-  { id:'geometric',    cat:'pro', label:'Geometric Teal',  acc:'#26A69A', bg:'pro_geometric',      ori:'landscape' },
-  { id:'blue_frost',   cat:'pro', label:'Blue Frost',      acc:'#1976D2', bg:'pro_blue_gradient',  ori:'portrait'  },
-  { id:'purple_waves', cat:'pro', label:'Purple Waves',    acc:'#7B1FA2', bg:'pro_purple_waves',   ori:'portrait'  },
-  { id:'pink',         cat:'pro', label:'Pink Luxe',       acc:'#E91E63', bg:'pro_pink_gradient',  ori:'portrait'  },
-  { id:'orange_glow',  cat:'pro', label:'Orange Glow',     acc:'#FF7043', bg:'pro_orange_gradient',ori:'portrait'  },
+  { id:'burger',       cat:'ff',  label:'Burger Joint',    acc:'#E8372A', bg:'ff_burger_pattern',  ori:'portrait',  fit:'crop', video:'' },
+  { id:'checker',      cat:'ff',  label:'Red Checker',     acc:'#D32F2F', bg:'ff_red_checker',     ori:'portrait',  fit:'crop', video:'' },
+  { id:'coral',        cat:'ff',  label:'Coral Energy',    acc:'#FF5722', bg:'ff_orange_organic',  ori:'portrait',  fit:'fit', video:'' },
+  { id:'fresh',        cat:'ff',  label:'Fresh &amp; Clean',acc:'#4CAF50', bg:'ff_green_leaves',    ori:'portrait',  fit:'crop', video:'' },
+  { id:'abstract',     cat:'pro', label:'Abstract Pro',    acc:'#9C27B0', bg:'pro_abstract',       ori:'landscape', fit:'fit', video:'' },
+  { id:'geometric',    cat:'pro', label:'Geometric Teal',  acc:'#26A69A', bg:'pro_geometric',      ori:'landscape', fit:'crop', video:'' },
+  { id:'blue_frost',   cat:'pro', label:'Blue Frost',      acc:'#1976D2', bg:'pro_blue_gradient',  ori:'portrait',  fit:'crop', video:'' },
+  { id:'purple_waves', cat:'pro', label:'Purple Waves',    acc:'#7B1FA2', bg:'pro_purple_waves',   ori:'portrait',  fit:'crop', video:'' },
+  { id:'pink',         cat:'pro', label:'Pink Luxe',       acc:'#E91E63', bg:'pro_pink_gradient',  ori:'portrait',  fit:'crop', video:'' },
+  { id:'orange_glow',  cat:'pro', label:'Orange Glow',     acc:'#FF7043', bg:'pro_orange_gradient',ori:'portrait',  fit:'crop', video:'' },
+  { id:'food_1_tpl',   cat:'ff',  label:'🎬 Food 1 Loop',  acc:'#FF6B35', bg:'',                    ori:'portrait',  fit:'crop', video:'food_1' },
+  { id:'food_2_tpl',   cat:'ff',  label:'🎬 Food 2 Loop',  acc:'#E8372A', bg:'',                    ori:'portrait',  fit:'crop', video:'food_2' },
+  { id:'food_3_tpl',   cat:'ff',  label:'🎬 Food 3 Loop',  acc:'#D84315', bg:'',                    ori:'portrait',  fit:'crop', video:'food_3' },
+  { id:'pro_1_tpl',    cat:'pro', label:'🎬 Pro 1 Loop',   acc:'#1976D2', bg:'',                    ori:'landscape', fit:'crop', video:'pro_1' },
+  { id:'pro_2_tpl',    cat:'pro', label:'🎬 Pro 2 Loop',   acc:'#1565C0', bg:'',                    ori:'landscape', fit:'crop', video:'pro_2' },
+  { id:'pro_3_tpl',    cat:'pro', label:'🎬 Pro 3 Loop',   acc:'#0D47A1', bg:'',                    ori:'landscape', fit:'crop', video:'pro_3' },
+  { id:'pro_4_tpl',    cat:'pro', label:'🎬 Pro 4 Loop',   acc:'#37474F', bg:'',                    ori:'landscape', fit:'crop', video:'pro_4' },
+  { id:'custom',       cat:'pro', label:'📤 Upload Custom', acc:'#757575', bg:'',                    ori:'portrait',  fit:'crop', video:'' },
 ];
 function qrc(id){ return `qrc:/app/res/image/${id}.jpg`; }
 function thumb(id){ return `/api/bg_thumb/${id}`; }
 
+const BG_VIDEO = [
+  { id:'food_1', label:'Food Loop 1', cat:'ff'  },
+  { id:'food_2', label:'Food Loop 2', cat:'ff'  },
+  { id:'food_3', label:'Food Loop 3', cat:'ff'  },
+  { id:'pro_1',  label:'Professional 1', cat:'pro' },
+  { id:'pro_2',  label:'Professional 2', cat:'pro' },
+  { id:'pro_3',  label:'Professional 3', cat:'pro' },
+  { id:'pro_4',  label:'Professional 4', cat:'pro' },
+];
+function videoUrl(id){ return window.location.origin + `/videos/${id}.mp4`; }
+
 /* ════════════════════════════════════════════════════════
-   SLIDER LOGIC — live label update, Apply on press only
+   SLIDER LOGIC — live label update and instant push
 ════════════════════════════════════════════════════════ */
 function onFsSlider(v) {
   _pendingFs = parseInt(v);
   document.getElementById('fs_val').textContent = v + 'px';
-  // Live preview: scale the number in the miniature
   const scale = _pendingFs / 96;
   document.getElementById('prev_num').style.fontSize = Math.round(42 * scale) + 'px';
-  // Live-update main display immediately
-  try { pub('fontSize', String(_pendingFs)); } catch(e) {}
+  pub('fontSize', String(_pendingFs));
+  showConfirm();
 }
 function onLsSlider(v) {
   _pendingLs = parseInt(v);
   document.getElementById('ls_val').textContent = v + 'px';
-  // Live preview: nothing visible for logo size in mini preview — value shown is enough
+  pub('logoSize', String(_pendingLs));
+  showConfirm();
 }
 function onTextSizeSlider(key, value, labelId, previewId, previewProp) {
   const v = Math.max(8, Math.min(240, parseInt(value) || 8));
@@ -620,45 +893,23 @@ function onTextSizeSlider(key, value, labelId, previewId, previewProp) {
     if (previewProp === 'fontFamily') el.style.fontFamily = v;
   }
   pub(key, String(v));
-}
-
-/* ════════════════════════════════════════════════════════
-   STICKY APPLY — sends number OR pending slider values
-════════════════════════════════════════════════════════ */
-// Remote tab: apply the queue number
-async function applyNum() {
-  const v = String(parseInt(document.getElementById('num_input').value)||0).padStart(3,'0');
-  await pub('currentNumber', v);
-  showConfirm();
-}
-// Theme tab: apply pending slider values
-async function applyPending() {
-  const promises = [];
-  if (_pendingFs !== null && _pendingFs !== _curFs) {
-    promises.push(pub('fontSize', String(_pendingFs)));
-    _curFs = _pendingFs;
-    _pendingFs = null;
-  }
-  if (_pendingLs !== null && _pendingLs !== _curLs) {
-    promises.push(pub('logoSize', String(_pendingLs)));
-    _curLs = _pendingLs;
-    _pendingLs = null;
-  }
-  // Also apply the number if remote tab is active
-  const remoteVisible = !document.getElementById('p_remote').classList.contains('hide');
-  if (remoteVisible) {
-    const v = String(parseInt(document.getElementById('num_input').value)||0).padStart(3,'0');
-    promises.push(pub('currentNumber', v));
-  }
-  if (promises.length > 0) await Promise.all(promises);
   showConfirm();
 }
 
 function showConfirm() {
   const el = document.getElementById('apply_confirm');
+  if (!el) return;
   el.classList.add('show');
   clearTimeout(_confirmT);
   _confirmT = setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+/* ════════════════════════════════════════════════════════
+   COLLAPSIBLE SECTIONS — keeps Settings/Theme scannable on a phone
+════════════════════════════════════════════════════════ */
+function toggleCard(headerEl) {
+  const card = headerEl.closest('.card');
+  if (card) card.classList.toggle('open');
 }
 
 /* ════════════════════════════════════════════════════════
@@ -669,9 +920,6 @@ function tab(name) {
     document.getElementById('p_' + n).classList.toggle('hide', n !== name);
     document.getElementById('t_' + n).classList.toggle('on', n === name);
   });
-  // Update Apply button label per tab
-  const labels = { remote:'Apply Number to Display', settings:'Save', theme:'Apply to Display' };
-  document.getElementById('apply_btn').textContent = labels[name] || 'Apply';
   if (name === 'theme') setTimeout(initPicker, 80);
 }
 
@@ -686,6 +934,8 @@ function adj(d) {
 function prevNum() {
   const v = String(parseInt(document.getElementById('num_input').value)||0).padStart(3,'0');
   document.getElementById('prev_num').textContent = v;
+  pub('currentNumber', v);
+  showConfirm();
 }
 
 /* ════════════════════════════════════════════════════════
@@ -716,6 +966,307 @@ function onVolSlider(v) {
 }
 
 /* ════════════════════════════════════════════════════════
+   DISPLAY LANGUAGE — switches on-screen text language
+════════════════════════════════════════════════════════ */
+let _dispLang = 'en';
+
+function setDisplayLanguage(lang) {
+  _dispLang = lang;
+  document.querySelectorAll('#disp_lang_grp .gi').forEach(b =>
+    b.classList.toggle('on', b.dataset.lang === lang));
+  const names = {en:'English', fr:'Français', ar:'العربية'};
+  const s = document.getElementById('disp_lang_summary');
+  if (s) s.textContent = names[lang] || lang;
+  pub('displayLanguage', lang);
+  showConfirm();
+}
+
+/* ════════════════════════════════════════════════════════
+   ADMIN PANEL LANGUAGE — translates this UI itself
+════════════════════════════════════════════════════════ */
+let _adminLang = 'en';
+
+// Full translation dictionary for the admin panel UI strings.
+// Keys match data-i18n attributes in the HTML.
+const ADMIN_I18N = {
+  en: {
+    // header
+    header_title: 'CandyBar',
+    header_sub: 'Queue display control',
+    // tabs
+    tab_remote: 'Remote',
+    tab_settings: 'Settings',
+    tab_theme: 'Theme',
+    // remote
+    queue_number: 'QUEUE NUMBER',
+    category_label: 'Category',
+    audio_label: 'AUDIO',
+    mute_label: 'Mute',
+    volume_label: 'Volume',
+    // settings
+    cat_title: 'Category',
+    cat_code_lbl: 'Short code',
+    cat_name_lbl: 'Display name',
+    cat_save: 'Save category',
+    facility_title: 'Facility & banner',
+    facility_name_lbl: 'Facility name',
+    banner_msg_lbl: 'Banner message',
+    save_btn: 'Save',
+    tts_title: 'Text-to-speech',
+    tts_sub: 'Enabled · English',
+    speech_label: 'Speech announcements',
+    tts_lang_lbl: 'Language',
+    display_language_title: 'Display language',
+    display_language_hint: 'Controls what language appears on the screen — NOW SERVING, NEXT UP, etc. Independent from TTS voice language.',
+    admin_lang_title: 'Admin panel language',
+    admin_lang_sub: 'Language of this control panel',
+    pin_title: 'Admin PIN',
+    pin_sub: '4-digit code to unlock this panel',
+    pin_placeholder: 'New 4-digit PIN',
+    status_title: 'Device status',
+    status_sub: 'Uptime, sessions & activity',
+    uptime_lbl: 'Uptime',
+    sessions_lbl: 'Sessions',
+    changes_lbl: 'Number Changes',
+    restart_lbl: 'Last Restart',
+    // theme
+    templates_title: 'Ready-made templates',
+    templates_sub: 'One tap sets colors, background & font',
+    layout_title: 'Layout',
+    accent_title: 'Accent color',
+    accent_sub: 'Highlights the number & category',
+    gradient_label: 'Gradient on accent bar',
+    bg_title: 'Background',
+    bg_sub: 'Choose an image, then fit & position it',
+    fit_mode_lbl: 'Fit mode',
+    zoom_lbl: 'Zoom',
+    move_x_lbl: 'Move X',
+    move_y_lbl: 'Move Y',
+    reset_pos: '↺ Reset position',
+    bg_upload_hint: '📁 Upload custom background (JPG/PNG, max 5 MB)',
+    remove_bg: 'Remove custom background',
+    logo_title: 'Logo',
+    logo_no_upload: '📁 Tap to upload logo (PNG/JPG/SVG, max 2 MB)',
+    logo_pos_lbl: 'Position',
+    logo_visibility: 'Visibility',
+    typography_title: 'Typography & size',
+    typography_sub: 'Font family and size for every element',
+    global_size_lbl: 'Global number size',
+    global_size_hint: 'Scales the queue number as a whole.',
+    overrides_sep: 'Individual overrides',
+    num_size_lbl: 'Number size',
+    cat_size_lbl: 'Category size',
+    fac_size_lbl: 'Facility size',
+    banner_size_lbl: 'Banner size',
+    serve_size_lbl: 'Now serving size',
+    font_families_lbl: 'Font families',
+    num_font_lbl: 'Number font',
+    cat_font_lbl: 'Category font',
+    fac_font_lbl: 'Facility font',
+    banner_font_lbl: 'Banner font',
+    serving_font_lbl: 'Now serving font',
+    logo_size_lbl: 'Logo size',
+    font_preset_lbl: 'Number font preset',
+    font_upload_hint: '📁 Upload font (TTF/OTF, max 2 MB)',
+    banner_footer_title: 'Footer banner',
+    banner_footer_sub: 'Show the scrolling message on-screen',
+    // apply
+    apply_btn: 'Apply to Display',
+    applied: 'Applied ✓',
+  },
+  fr: {
+    header_title: 'CandyBar',
+    header_sub: 'Contrôle de l\'affichage',
+    tab_remote: 'Télécommande',
+    tab_settings: 'Paramètres',
+    tab_theme: 'Thème',
+    queue_number: 'NUMÉRO DE FILE',
+    category_label: 'Catégorie',
+    audio_label: 'AUDIO',
+    mute_label: 'Muet',
+    volume_label: 'Volume',
+    cat_title: 'Catégorie',
+    cat_code_lbl: 'Code court',
+    cat_name_lbl: 'Nom affiché',
+    cat_save: 'Enregistrer la catégorie',
+    facility_title: 'Établissement & bannière',
+    facility_name_lbl: 'Nom de l\'établissement',
+    banner_msg_lbl: 'Message de la bannière',
+    save_btn: 'Enregistrer',
+    tts_title: 'Synthèse vocale',
+    tts_sub: 'Activée · Français',
+    speech_label: 'Annonces vocales',
+    tts_lang_lbl: 'Langue',
+    display_language_title: 'Langue d\'affichage',
+    display_language_hint: 'Contrôle la langue qui apparaît à l\'écran — EN SERVICE, PROCHAINS, etc.',
+    admin_lang_title: 'Langue du panneau admin',
+    admin_lang_sub: 'Langue de ce panneau de contrôle',
+    pin_title: 'Code PIN admin',
+    pin_sub: 'Code à 4 chiffres pour déverrouiller',
+    pin_placeholder: 'Nouveau PIN à 4 chiffres',
+    status_title: 'État de l\'appareil',
+    status_sub: 'Disponibilité, sessions et activité',
+    uptime_lbl: 'Disponibilité',
+    sessions_lbl: 'Sessions',
+    changes_lbl: 'Changements de numéro',
+    restart_lbl: 'Dernier redémarrage',
+    templates_title: 'Modèles prêts à l\'emploi',
+    templates_sub: 'Un appui définit couleurs, fond et police',
+    layout_title: 'Mise en page',
+    accent_title: 'Couleur d\'accent',
+    accent_sub: 'Met en valeur le numéro et la catégorie',
+    gradient_label: 'Dégradé sur la barre d\'accent',
+    bg_title: 'Arrière-plan',
+    bg_sub: 'Choisissez une image, puis ajustez',
+    fit_mode_lbl: 'Mode d\'ajustement',
+    zoom_lbl: 'Zoom',
+    move_x_lbl: 'Déplacer X',
+    move_y_lbl: 'Déplacer Y',
+    reset_pos: '↺ Réinitialiser la position',
+    bg_upload_hint: '📁 Télécharger un fond personnalisé (JPG/PNG, max 5 Mo)',
+    remove_bg: 'Supprimer le fond personnalisé',
+    logo_title: 'Logo',
+    logo_no_upload: '📁 Appuyer pour télécharger un logo (PNG/JPG/SVG, max 2 Mo)',
+    logo_pos_lbl: 'Position',
+    logo_visibility: 'Visibilité',
+    typography_title: 'Typographie et taille',
+    typography_sub: 'Famille et taille de police pour chaque élément',
+    global_size_lbl: 'Taille globale du numéro',
+    global_size_hint: 'Met à l\'échelle le numéro de file dans son ensemble.',
+    overrides_sep: 'Remplacements individuels',
+    num_size_lbl: 'Taille du numéro',
+    cat_size_lbl: 'Taille de la catégorie',
+    fac_size_lbl: 'Taille de l\'établissement',
+    banner_size_lbl: 'Taille de la bannière',
+    serve_size_lbl: 'Taille «En service»',
+    font_families_lbl: 'Familles de polices',
+    num_font_lbl: 'Police du numéro',
+    cat_font_lbl: 'Police de la catégorie',
+    fac_font_lbl: 'Police de l\'établissement',
+    banner_font_lbl: 'Police de la bannière',
+    serving_font_lbl: 'Police «En service»',
+    logo_size_lbl: 'Taille du logo',
+    font_preset_lbl: 'Préréglage de la police du numéro',
+    font_upload_hint: '📁 Télécharger une police (TTF/OTF, max 2 Mo)',
+    banner_footer_title: 'Bannière de pied de page',
+    banner_footer_sub: 'Afficher le message défilant à l\'écran',
+    apply_btn: 'Appliquer à l\'affichage',
+    applied: 'Appliqué ✓',
+  },
+  ar: {
+    header_title: 'CandyBar',
+    header_sub: 'التحكم في شاشة الانتظار',
+    tab_remote: 'تحكم',
+    tab_settings: 'إعدادات',
+    tab_theme: 'مظهر',
+    queue_number: 'رقم الانتظار',
+    category_label: 'الفئة',
+    audio_label: 'الصوت',
+    mute_label: 'كتم',
+    volume_label: 'مستوى الصوت',
+    cat_title: 'الفئة',
+    cat_code_lbl: 'رمز قصير',
+    cat_name_lbl: 'الاسم المعروض',
+    cat_save: 'حفظ الفئة',
+    facility_title: 'المنشأة والشريط',
+    facility_name_lbl: 'اسم المنشأة',
+    banner_msg_lbl: 'رسالة الشريط',
+    save_btn: 'حفظ',
+    tts_title: 'تحويل النص إلى كلام',
+    tts_sub: 'مفعّل · العربية',
+    speech_label: 'الإعلانات الصوتية',
+    tts_lang_lbl: 'اللغة',
+    display_language_title: 'لغة الشاشة',
+    display_language_hint: 'تتحكم في اللغة التي تظهر على الشاشة — يُخدَم الآن، التالي… مستقلة عن لغة النطق.',
+    admin_lang_title: 'لغة لوحة الإدارة',
+    admin_lang_sub: 'لغة هذه اللوحة',
+    pin_title: 'رمز PIN للمدير',
+    pin_sub: 'رمز مكوّن من 4 أرقام للفتح',
+    pin_placeholder: 'رمز PIN جديد مكوّن من 4 أرقام',
+    status_title: 'حالة الجهاز',
+    status_sub: 'وقت التشغيل والجلسات والنشاط',
+    uptime_lbl: 'وقت التشغيل',
+    sessions_lbl: 'الجلسات',
+    changes_lbl: 'تغييرات الأرقام',
+    restart_lbl: 'آخر إعادة تشغيل',
+    templates_title: 'قوالب جاهزة',
+    templates_sub: 'ضغطة واحدة تضبط الألوان والخلفية والخط',
+    layout_title: 'التخطيط',
+    accent_title: 'لون التمييز',
+    accent_sub: 'يبرز الرقم والفئة',
+    gradient_label: 'تدرج على شريط التمييز',
+    bg_title: 'خلفية الشاشة',
+    bg_sub: 'اختر صورة ثم اضبط الاتساق والموضع',
+    fit_mode_lbl: 'وضع الملاءمة',
+    zoom_lbl: 'تكبير',
+    move_x_lbl: 'تحريك X',
+    move_y_lbl: 'تحريك Y',
+    reset_pos: '↺ إعادة تعيين الموضع',
+    bg_upload_hint: '📁 رفع خلفية مخصصة (JPG/PNG، الحد 5 ميجا)',
+    remove_bg: 'إزالة الخلفية المخصصة',
+    logo_title: 'الشعار',
+    logo_no_upload: '📁 اضغط لرفع شعار (PNG/JPG/SVG، الحد 2 ميجا)',
+    logo_pos_lbl: 'الموضع',
+    logo_visibility: 'الظهور',
+    typography_title: 'الطباعة والحجم',
+    typography_sub: 'عائلة الخط وحجمه لكل عنصر',
+    global_size_lbl: 'الحجم الإجمالي للرقم',
+    global_size_hint: 'يضبط حجم رقم الانتظار بشكل عام.',
+    overrides_sep: 'تجاوزات فردية',
+    num_size_lbl: 'حجم الرقم',
+    cat_size_lbl: 'حجم الفئة',
+    fac_size_lbl: 'حجم اسم المنشأة',
+    banner_size_lbl: 'حجم الشريط',
+    serve_size_lbl: 'حجم «يُخدَم الآن»',
+    font_families_lbl: 'عائلات الخطوط',
+    num_font_lbl: 'خط الرقم',
+    cat_font_lbl: 'خط الفئة',
+    fac_font_lbl: 'خط المنشأة',
+    banner_font_lbl: 'خط الشريط',
+    serving_font_lbl: 'خط «يُخدَم الآن»',
+    logo_size_lbl: 'حجم الشعار',
+    font_preset_lbl: 'إعداد مسبق لخط الرقم',
+    font_upload_hint: '📁 رفع خط (TTF/OTF، الحد 2 ميجا)',
+    banner_footer_title: 'شريط التذييل',
+    banner_footer_sub: 'عرض الرسالة المتحركة على الشاشة',
+    apply_btn: 'تطبيق على الشاشة',
+    applied: 'تم التطبيق ✓',
+  }
+};
+
+function t(key) {
+  return (ADMIN_I18N[_adminLang] && ADMIN_I18N[_adminLang][key]) ||
+         ADMIN_I18N['en'][key] || key;
+}
+
+function setAdminLang(lang) {
+  _adminLang = lang;
+  // Highlight the active button
+  document.querySelectorAll('#admin_lang_grp .gi').forEach(b =>
+    b.classList.toggle('on', b.dataset.lang === lang));
+  // Apply RTL for Arabic
+  document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
+  document.documentElement.lang = lang;
+  // Translate every element with a data-i18n attribute
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (el.tagName === 'INPUT' && el.hasAttribute('placeholder')) {
+      el.placeholder = val;
+    } else {
+      el.textContent = val;
+    }
+  });
+  // Re-label dynamic buttons that were set programmatically
+  const applyBtn = document.getElementById('apply_btn');
+  if (applyBtn) applyBtn.textContent = t('apply_btn');
+  const applyConf = document.getElementById('apply_confirm');
+  if (applyConf) applyConf.textContent = t('applied');
+  // Persist choice in localStorage (admin-only, doesn't affect the display)
+  try { localStorage.setItem('cbAdminLang', lang); } catch(e) {}
+}
+
+/* ════════════════════════════════════════════════════════
    SETTINGS SAVES
 ════════════════════════════════════════════════════════ */
 async function saveCategory() {
@@ -728,6 +1279,8 @@ async function saveCategory() {
     document.getElementById('rc_name').textContent = name;
     document.getElementById('prev_cat').textContent = name;
   }
+  const s = document.getElementById('cat_summary');
+  if (s) s.textContent = (name||document.getElementById('cat_name').value||'Category A') + ' · ' + (id||document.getElementById('cat_id').value||'A');
   showConfirm();
 }
 async function saveGeneral() {
@@ -743,6 +1296,14 @@ function toggleTts() {
   btn.textContent = ttsOn ? 'Enabled' : 'Disabled';
   btn.classList.toggle('on', ttsOn);
   pub('ttsEnabled', ttsOn ? 'true' : 'false');
+  updateTtsSummary();
+}
+function updateTtsSummary() {
+  const s = document.getElementById('tts_summary');
+  if (!s) return;
+  const langNames = {en:'English', fr:'French', ar:'Arabic'};
+  const lang = document.getElementById('tts_lang')?.value || 'en';
+  s.textContent = (ttsOn ? 'Enabled' : 'Disabled') + ' · ' + (langNames[lang]||lang);
 }
 async function changePin() {
   const p = document.getElementById('new_pin').value.trim();
@@ -760,6 +1321,8 @@ function setLayout(l) {
   document.querySelectorAll('.lay-thumb').forEach(el =>
     el.classList.toggle('on', el.id === 'lay_' + l));
   pub('layoutType', l);
+  const s = document.getElementById('layout_summary');
+  if (s) s.textContent = l;
 }
 function toggleBanner() {
   bannerOn = !bannerOn;
@@ -812,13 +1375,26 @@ function buildTpls() {
       const d = document.createElement('div');
       d.className = 'tpl-card'; d.id = 'tpl_' + t.id;
       d.onclick = () => applyTpl(t);
-      d.innerHTML = `
+      if (t.video && t.video.length > 0) {
+        d.innerHTML = `
+        <div class="tpl-bg" style="position:absolute;inset:0;overflow:hidden;">
+          <video src="/videos/${t.video}.mp4" autoplay loop muted playsinline 
+                 style="width:100%;height:100%;object-fit:cover;"></video>
+        </div>
+        <div class="tpl-overlay" style="background:rgba(0,0,0,.45)"></div>
+        <div class="tpl-body">
+          <div class="tpl-num" style="color:${t.acc}">001</div>
+          <div class="tpl-name">${t.label}</div>
+        </div>`;
+      } else {
+        d.innerHTML = `
         <div class="tpl-bg" style="background-image:url('${thumb(t.bg)}')"></div>
         <div class="tpl-overlay" style="background:rgba(0,0,0,.45)"></div>
         <div class="tpl-body">
           <div class="tpl-num" style="color:${t.acc}">001</div>
           <div class="tpl-name">${t.label}</div>
         </div>`;
+      }
       el.appendChild(d);
     });
   });
@@ -837,20 +1413,147 @@ function buildBgGrids() {
     });
   });
 }
+function buildBgVideoGrid() {
+  // Build both pro and ff video grids
+  ['pro', 'ff'].forEach(cat => {
+    const el = document.getElementById('bg_video_grid_' + cat);
+    el.innerHTML = '';
+    BG_VIDEO.filter(v => v.cat === cat).forEach(v => {
+      const b = document.createElement('button');
+      b.className = 'bg-btn'; b.id = 'bgv_' + v.id; b.title = v.label;
+      const videoUrlPath = `/videos/${v.id}.mp4`;
+      b.innerHTML = `<video src="${videoUrlPath}" autoplay loop muted playsinline 
+                     style="width:100%; height:100%; object-fit: cover; background:#111;"></video>
+                     <div class="bg-label">${v.label}</div>`;
+      b.onclick = () => selectBgVideo(v);
+      el.appendChild(b);
+    });
+  });
+}
+function selectBgVideo(v) {
+  document.querySelectorAll('.bg-btn').forEach(b => b.classList.remove('on'));
+  const b = document.getElementById('bgv_' + v.id);
+  if (b) b.classList.add('on');
+  document.getElementById('bg_sel_lbl').textContent = v.label + ' (animated)';
+  const bgs = document.getElementById('bg_summary'); if (bgs) bgs.textContent = v.label;
+  
+  // Show video preview
+  const previewEl = document.getElementById('prev_bg');
+  const vidUrl = videoUrl(v.id);
+  const relUrl = `/videos/${v.id}.mp4`;
+  previewEl.style.backgroundImage = 'none';
+  previewEl.innerHTML = `<video src="${relUrl}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; display:block;"></video>`;
+  
+  Promise.all([
+    pub('backgroundType', 'video'),
+    pub('backgroundImage', ''),  // Clear image to avoid conflicts
+    pub('backgroundVideoSource', vidUrl),
+    pub('backgroundScale', '1.0'),
+    pub('backgroundOffsetX', '0'),
+    pub('backgroundOffsetY', '0'),
+  ]);
+  showConfirm();
+}
+function bgTypeTab(type) {
+  const staticSection = document.getElementById('bg_static_section');
+  const animatedSection = document.getElementById('bg_animated_section');
+  const staticBtn = document.getElementById('bg_t_static');
+  const animatedBtn = document.getElementById('bg_t_animated');
+  
+  staticSection.classList.toggle('hide', type !== 'static');
+  animatedSection.classList.toggle('hide', type !== 'animated');
+  staticBtn.classList.toggle('on', type === 'static');
+  animatedBtn.classList.toggle('on', type === 'animated');
+  
+  // Ensure all videos in animated grid are playing when we switch to that tab
+  if (type === 'animated') {
+    document.querySelectorAll('#bg_video_grid_pro video, #bg_video_grid_ff video').forEach(vid => {
+      vid.play().catch(err => console.log("Video play failed:", err));
+    });
+  }
+}
+function bgVideoTab(c) {
+  document.getElementById('bg_video_grid_pro').classList.toggle('hide', c !== 'pro');
+  document.getElementById('bg_video_grid_ff').classList.toggle('hide', c !== 'ff');
+  document.getElementById('bg_v_t_pro').classList.toggle('on', c === 'pro');
+  document.getElementById('bg_v_t_ff').classList.toggle('on', c === 'ff');
+}
 function bgTab(c) {
   document.getElementById('bg_grid_pro').classList.toggle('hide', c !== 'pro');
   document.getElementById('bg_grid_ff').classList.toggle('hide', c !== 'ff');
   document.getElementById('bg_t_pro').classList.toggle('on', c === 'pro');
   document.getElementById('bg_t_ff').classList.toggle('on', c === 'ff');
 }
+function updateBgPreviewTransform() {
+  const el = document.getElementById('prev_bg');
+  if (!el) return;
+  el.style.transform = `translate(${bgOffsetX}px, ${bgOffsetY}px) scale(${bgScale})`;
+  el.style.transformOrigin = 'center center';
+}
+function onBgZoom(v) {
+  bgScale = Math.max(0.5, Math.min(2.0, parseFloat(v) / 100));
+  document.getElementById('bg_zoom_val').textContent = Math.round(bgScale * 100) + '%';
+  updateBgPreviewTransform();
+  pub('backgroundScale', String(bgScale));
+}
+function onBgMoveX(v) {
+  bgOffsetX = parseInt(v) || 0;
+  document.getElementById('bg_move_x_val').textContent = bgOffsetX + 'px';
+  updateBgPreviewTransform();
+  pub('backgroundOffsetX', String(bgOffsetX));
+}
+function onBgMoveY(v) {
+  bgOffsetY = parseInt(v) || 0;
+  document.getElementById('bg_move_y_val').textContent = bgOffsetY + 'px';
+  updateBgPreviewTransform();
+  pub('backgroundOffsetY', String(bgOffsetY));
+}
+function setBgFitMode(mode) {
+  pub('backgroundFitMode', mode);
+}
+function resetBgAdjust() {
+  bgScale = 1.0; bgOffsetX = 0; bgOffsetY = 0;
+  document.getElementById('bg_zoom_slider').value = 100;
+  document.getElementById('bg_move_x_slider').value = 0;
+  document.getElementById('bg_move_y_slider').value = 0;
+  document.getElementById('bg_zoom_val').textContent = '100%';
+  document.getElementById('bg_move_x_val').textContent = '0px';
+  document.getElementById('bg_move_y_val').textContent = '0px';
+  updateBgPreviewTransform();
+  Promise.all([
+    pub('backgroundScale', '1.0'),
+    pub('backgroundOffsetX', '0'),
+    pub('backgroundOffsetY', '0')
+  ]);
+}
 function selectBg(bg) {
   document.querySelectorAll('.bg-btn').forEach(b => b.classList.remove('on'));
   const b = document.getElementById('bgb_' + bg.id);
   if (b) b.classList.add('on');
   document.getElementById('bg_sel_lbl').textContent = bg.label;
+  const bgs = document.getElementById('bg_summary'); if (bgs) bgs.textContent = bg.label;
   curBg = qrc(bg.id);
+  // Clear any video from preview
+  const previewEl = document.getElementById('prev_bg');
+  previewEl.innerHTML = '';
   setPrevBg(curBg);
-  Promise.all([pub('backgroundImage', qrc(bg.id)), pub('backgroundOrientation', bg.ori)]);
+  bgScale = 1.0; bgOffsetX = 0; bgOffsetY = 0;
+  document.getElementById('bg_zoom_slider').value = 100;
+  document.getElementById('bg_move_x_slider').value = 0;
+  document.getElementById('bg_move_y_slider').value = 0;
+  document.getElementById('bg_zoom_val').textContent = '100%';
+  document.getElementById('bg_move_x_val').textContent = '0px';
+  document.getElementById('bg_move_y_val').textContent = '0px';
+  updateBgPreviewTransform();
+  Promise.all([
+    pub('backgroundType', 'image'),
+    pub('backgroundImage', qrc(bg.id)),
+    pub('backgroundOrientation', bg.ori),
+    pub('backgroundFitMode', bg.fit || 'auto'),
+    pub('backgroundScale', '1.0'),
+    pub('backgroundOffsetX', '0'),
+    pub('backgroundOffsetY', '0')
+  ]);
   showConfirm();
 }
 function highlightBg(qrcUrl) {
@@ -861,6 +1564,7 @@ function highlightBg(qrcUrl) {
         const b = document.getElementById('bgb_' + bg.id);
         if (b) b.classList.add('on');
         document.getElementById('bg_sel_lbl').textContent = bg.label;
+        const bgs = document.getElementById('bg_summary'); if (bgs) bgs.textContent = bg.label;
         bgTab(c); return;
       }
     }
@@ -884,21 +1588,96 @@ async function applyTpl(t) {
   const card = document.getElementById('tpl_' + t.id);
   if (card) card.classList.add('on');
   setAccLocal(t.acc);
-  curBg = qrc(t.bg);
-  setPrevBg(curBg);
-  highlightBg(curBg);
-  await Promise.all([
-    pub('backgroundImage', qrc(t.bg)),
-    pub('backgroundOrientation', t.ori),
-    pub('accentColor', t.acc),
-    pub('numberFont', 'DM Mono'),
-  ]);
+  
+  bgScale = 1.0; bgOffsetX = 0; bgOffsetY = 0;
+  document.getElementById('bg_zoom_slider').value = 100;
+  document.getElementById('bg_move_x_slider').value = 0;
+  document.getElementById('bg_move_y_slider').value = 0;
+  document.getElementById('bg_zoom_val').textContent = '100%';
+  document.getElementById('bg_move_x_val').textContent = '0px';
+  document.getElementById('bg_move_y_val').textContent = '0px';
+  updateBgPreviewTransform();
+  
+  // Handle different template types
+  if (t.id === 'custom') {
+    // Custom/empty template - no background, ready for upload
+    const previewEl = document.getElementById('prev_bg');
+    previewEl.innerHTML = '';
+    previewEl.style.backgroundImage = 'none';
+    previewEl.style.background = 'linear-gradient(135deg, #1e1e1e, #2d2d2d)';
+    document.getElementById('bg_sel_lbl').textContent = 'Ready for custom upload';
+    const bgs = document.getElementById('bg_summary'); if (bgs) bgs.textContent = 'Custom - ready to upload';
+    
+    await Promise.all([
+      pub('backgroundType', 'image'),
+      pub('backgroundImage', ''),
+      pub('accentColor', t.acc),
+      pub('numberFont', 'DM Mono'),
+    ]);
+  } else if (t.video && t.video.length > 0) {
+    // Video template
+    const previewEl = document.getElementById('prev_bg');
+    const vidUrl = videoUrl(t.video);
+    const relUrl = `/videos/${t.video}.mp4`;
+    previewEl.style.backgroundImage = 'none';
+    previewEl.innerHTML = `<video src="${relUrl}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; display:block;"></video>`;
+    document.getElementById('bg_sel_lbl').textContent = t.label + ' (animated)';
+    const bgs = document.getElementById('bg_summary'); if (bgs) bgs.textContent = t.label;
+    
+    await Promise.all([
+      pub('backgroundType', 'video'),
+      pub('backgroundImage', ''),  // Clear image to avoid conflicts
+      pub('backgroundVideoSource', vidUrl),
+      pub('backgroundOrientation', t.ori),
+      pub('backgroundFitMode', t.fit || 'auto'),
+      pub('backgroundScale', '1.0'),
+      pub('backgroundOffsetX', '0'),
+      pub('backgroundOffsetY', '0'),
+      pub('accentColor', t.acc),
+      pub('numberFont', 'DM Mono'),
+    ]);
+  } else {
+    // Image template
+    curBg = qrc(t.bg);
+    setPrevBg(curBg);
+    highlightBg(curBg);
+    document.getElementById('bg_sel_lbl').textContent = t.label;
+    const bgs = document.getElementById('bg_summary'); if (bgs) bgs.textContent = t.label;
+    
+    await Promise.all([
+      pub('backgroundType', 'image'),
+      pub('backgroundImage', qrc(t.bg)),
+      pub('backgroundOrientation', t.ori),
+      pub('backgroundFitMode', t.fit || 'auto'),
+      pub('backgroundScale', '1.0'),
+      pub('backgroundOffsetX', '0'),
+      pub('backgroundOffsetY', '0'),
+      pub('accentColor', t.acc),
+      pub('numberFont', 'DM Mono'),
+    ]);
+  }
   showConfirm();
 }
 function removeBg() {
   const def = 'qrc:/app/res/image/ff_burger_pattern.jpg';
   curBg = def;
-  Promise.all([pub('backgroundImage', def), pub('backgroundOrientation', 'portrait')]);
+  bgScale = 1.0; bgOffsetX = 0; bgOffsetY = 0;
+  document.getElementById('bg_zoom_slider').value = 100;
+  document.getElementById('bg_move_x_slider').value = 0;
+  document.getElementById('bg_move_y_slider').value = 0;
+  document.getElementById('bg_zoom_val').textContent = '100%';
+  document.getElementById('bg_move_x_val').textContent = '0px';
+  document.getElementById('bg_move_y_val').textContent = '0px';
+  updateBgPreviewTransform();
+  Promise.all([
+    pub('backgroundType', 'image'),
+    pub('backgroundImage', def),
+    pub('backgroundOrientation', 'portrait'),
+    pub('backgroundFitMode', 'crop'),
+    pub('backgroundScale', '1.0'),
+    pub('backgroundOffsetX', '0'),
+    pub('backgroundOffsetY', '0')
+  ]);
   setPrevBg(def); highlightBg(def);
   showConfirm();
 }
@@ -959,6 +1738,7 @@ function setAccLocal(hex) {
   document.getElementById('prev_bar').style.background = hex;
   document.getElementById('prev_cat').style.color = hex;
   document.getElementById('color_hex').value = hex;
+  const sw = document.getElementById('acc_swatch'); if (sw) sw.style.background = hex;
   const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
   const max=Math.max(r,g,b)/255,min=Math.min(r,g,b)/255;
   let h=0;
@@ -982,10 +1762,26 @@ async function uploadBg(input) {
     if (d.ok) {
       curBg = d.url;
       document.getElementById('prev_bg').style.backgroundImage=`url('${d.url}?${Date.now()}')`;
+      bgScale = 1.0; bgOffsetX = 0; bgOffsetY = 0;
+      document.getElementById('bg_zoom_slider').value = 100;
+      document.getElementById('bg_move_x_slider').value = 0;
+      document.getElementById('bg_move_y_slider').value = 0;
+      document.getElementById('bg_zoom_val').textContent = '100%';
+      document.getElementById('bg_move_x_val').textContent = '0px';
+      document.getElementById('bg_move_y_val').textContent = '0px';
+      updateBgPreviewTransform();
+      Promise.all([
+        pub('backgroundType', 'image'),
+        pub('backgroundFitMode', 'auto'),
+        pub('backgroundScale', '1.0'),
+        pub('backgroundOffsetX', '0'),
+        pub('backgroundOffsetY', '0')
+      ]);
       document.getElementById('bg_hint').style.display='none';
       const img = document.getElementById('bg_prev');
       img.src=d.url+'?'+Date.now(); img.style.display='block';
       document.getElementById('bg_sel_lbl').textContent='Custom upload';
+      const bgs = document.getElementById('bg_summary'); if (bgs) bgs.textContent = 'Custom upload';
       showConfirm();
     }
   } catch(e) {}
@@ -1001,6 +1797,7 @@ async function uploadLogo(input) {
       const img = document.getElementById('logo_prev');
       img.src=d.url+'?'+Date.now(); img.style.display='block';
       document.getElementById('logo_hint').style.display='none';
+      const ls = document.getElementById('logo_summary'); if (ls) ls.textContent = 'Logo uploaded';
       showConfirm();
     }
   } catch(e) {}
@@ -1119,6 +1916,7 @@ function pub(key, value) {
 async function init() {
   buildTpls();
   buildBgGrids();
+  buildBgVideoGrid();
 
   try {
     const r = await fetch('/api/state');
@@ -1131,6 +1929,7 @@ async function init() {
     document.getElementById('cat_name').value       = cname;
     document.getElementById('rc_name').textContent  = cname;
     document.getElementById('prev_cat').textContent = cname;
+    const catS = document.getElementById('cat_summary'); if (catS) catS.textContent = cname + ' · ' + cat;
 
     document.getElementById('num_input').value      = parseInt(d.currentNumber)||1;
     document.getElementById('prev_num').textContent = d.currentNumber||'001';
@@ -1145,6 +1944,7 @@ async function init() {
       layout = d.layoutType;
       document.querySelectorAll('.lay-thumb').forEach(el =>
         el.classList.toggle('on', el.id==='lay_'+d.layoutType));
+      const layS = document.getElementById('layout_summary'); if (layS) layS.textContent = d.layoutType;
     }
 
     if (d.backgroundImage) {
@@ -1152,12 +1952,29 @@ async function init() {
       setPrevBg(d.backgroundImage);
       highlightBg(d.backgroundImage);
     }
+    if (d.backgroundFitMode) {
+      const fitMode = d.backgroundFitMode;
+      if (fitMode === 'fit' || fitMode === 'crop' || fitMode === 'stretch' || fitMode === 'auto') {
+        document.getElementById('bg_fit_mode').value = fitMode;
+      }
+    }
+    bgScale = parseFloat(d.backgroundScale || '1.0') || 1.0;
+    bgOffsetX = parseInt(d.backgroundOffsetX || '0') || 0;
+    bgOffsetY = parseInt(d.backgroundOffsetY || '0') || 0;
+    document.getElementById('bg_zoom_slider').value = Math.round(bgScale * 100);
+    document.getElementById('bg_move_x_slider').value = bgOffsetX;
+    document.getElementById('bg_move_y_slider').value = bgOffsetY;
+    document.getElementById('bg_zoom_val').textContent = Math.round(bgScale * 100) + '%';
+    document.getElementById('bg_move_x_val').textContent = bgOffsetX + 'px';
+    document.getElementById('bg_move_y_val').textContent = bgOffsetY + 'px';
+    updateBgPreviewTransform();
 
     // Logo — show empty-state prompt if no logo uploaded yet
     if (d.logoUrl) {
       const img = document.getElementById('logo_prev');
       img.src = d.logoUrl; img.style.display='block';
       document.getElementById('logo_hint').style.display='none';
+      const ls = document.getElementById('logo_summary'); if (ls) ls.textContent = 'Logo uploaded';
     } else {
       document.getElementById('logo_hint').textContent = '📁 No logo uploaded — tap to add one';
     }
@@ -1185,6 +2002,15 @@ async function init() {
     document.getElementById('tts_btn').textContent = ttsOn?'Enabled':'Disabled';
     document.getElementById('tts_btn').classList.toggle('on', ttsOn);
     document.getElementById('tts_lang').value = d.ttsLanguage||'en';
+    updateTtsSummary();
+    // Display language — hydrate buttons from persisted state
+    const dl = d.displayLanguage || 'en';
+    _dispLang = dl;
+    document.querySelectorAll('#disp_lang_grp .gi').forEach(b =>
+      b.classList.toggle('on', b.dataset.lang === dl));
+    const dispNames = {en:'English', fr:'Français', ar:'العربية'};
+    const dls = document.getElementById('disp_lang_summary');
+    if (dls) dls.textContent = dispNames[dl] || dl;
     document.getElementById('banner_btn').textContent = bannerOn?'Visible':'Hidden';
     document.getElementById('banner_btn').classList.toggle('on', bannerOn);
     if (document.getElementById('grad_btn')) {
@@ -1238,9 +2064,21 @@ async function init() {
 
   } catch(e) { console.error('init error', e); }
 
+  // Restore admin panel language from localStorage
+  try {
+    const saved = localStorage.getItem('cbAdminLang');
+    if (saved && ['en','fr','ar'].includes(saved)) setAdminLang(saved);
+  } catch(e) {}
+
   loadStats();
   setInterval(loadStats, 30000);
   loadFonts();
+
+  // Hide loading overlay after everything is initialized
+  setTimeout(() => {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.classList.add('hide');
+  }, 500);
 }
 
 document.addEventListener('DOMContentLoaded', init);

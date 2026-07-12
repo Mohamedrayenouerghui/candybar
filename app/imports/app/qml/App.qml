@@ -42,6 +42,43 @@ Window {
         anchors.fill: parent
     }
 
+    // ── Fullscreen restore button (only visible when windowed) ────────────
+    Rectangle {
+        id: restoreButton
+        anchors {
+            right: parent.right
+            top: parent.top
+            rightMargin: 20
+            topMargin: 20
+        }
+        width: 120
+        height: 50
+        color: "#0d0f12"
+        radius: 8
+        border {
+            width: 2
+            color: "#FFB84D"
+        }
+        visible: root.visibility !== Window.FullScreen
+        z: 999
+
+        Text {
+            anchors.centerIn: parent
+            text: "Restore Fullscreen"
+            color: "#FFFFFF"
+            font.pixelSize: 16
+            font.weight: Font.Bold
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                root.showFullScreen()
+            }
+        }
+    }
+
     // ── Keyboard shortcuts (kiosk management) ────────────────────────────
     // Escape or Super+M → exit fullscreen to windowed (for maintenance)
     // Super+Q          → close the app

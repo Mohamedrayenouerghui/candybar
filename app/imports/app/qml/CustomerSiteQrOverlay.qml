@@ -85,7 +85,7 @@ Item {
         Text {
             width:               parent.width
             horizontalAlignment: Text.AlignHCenter
-            text:                "Visit our website"
+            text:                DisplayState.tr("visit_website")
             font.family:         DisplayState.uiFont
             font.pixelSize:      9
             font.weight:         Font.Medium
