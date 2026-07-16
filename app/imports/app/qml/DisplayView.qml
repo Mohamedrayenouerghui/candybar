@@ -54,7 +54,6 @@ Item {
     readonly property real numScale: Math.max(root.height / 480.0, 0.8)
 
     // Per-layout number multipliers — Centered gets the most room
-    readonly property real numLayoutClassic:  1.00
     readonly property real numLayoutSplit:    1.10
     readonly property real numLayoutCentered: 1.30
 
@@ -63,7 +62,6 @@ Item {
     // own tier rather than a caption. Because it now lives inside a badge
     // with guaranteed contrast, it can afford to be bigger without
     // competing visually with the number.
-    readonly property real catScaleClassic:  0.34
     readonly property real catScaleSplit:    0.32
     readonly property real catScaleCentered: 0.38
 
@@ -96,33 +94,7 @@ Item {
     readonly property color glass_shadow: Qt.rgba(0, 0, 0, 0.28)
     readonly property color glass_highlight: Qt.rgba(1, 1, 1, 0.08)
 
-    // Reusable glass-card background: soft outer shadow + fill + border +
-    // a faint top highlight streak, so it reads as a lifted glass panel
-    // rather than a flat dark rectangle.
-    component GlassCard: Item {
-        Rectangle {
-            id: shadowLayer
-            anchors.fill: parent
-            anchors.margins: -6
-            radius: root.radius_outer + 6
-            color: root.glass_shadow
-        }
-        Rectangle {
-            anchors.fill: parent
-            radius: root.radius_outer
-            color: root.glass_fill
-            border.width: 1
-            border.color: root.glass_border
-            clip: true
 
-            Rectangle {
-                anchors { left: parent.left; right: parent.right; top: parent.top }
-                height: parent.height * 0.5
-                radius: root.radius_outer
-                color: root.glass_highlight
-            }
-        }
-    }
 
     // ── Shared components ────────────────────────────────────────────────
 
@@ -178,19 +150,34 @@ Item {
             Behavior on color { ColorAnimation { duration: root.dur_full } }
         }
 
-        Text {
-            id: catText
+        Item {
             Layout.maximumWidth: root.width * 0.9
-            wrapMode: Text.WordWrap
-            maximumLineCount: 2
-            text: DisplayState.categoryDisplayName.toUpperCase()
-            font.family: DisplayState.categoryFont || DisplayState.numberFont
-            font.pixelSize: Math.max(DisplayState.categoryFontSize || (numPx * catScale), 20)
-            font.weight: Font.Bold
-            font.letterSpacing: 1.5
-            color: "#FFFFFF"
-            style: Text.Raised
-            styleColor: Qt.rgba(0, 0, 0, 0.65)
+            Layout.preferredWidth: catText.implicitWidth
+            Layout.preferredHeight: catText.implicitHeight
+            Text {
+                id: catShadow1
+                anchors.centerIn: parent
+                text: DisplayState.categoryDisplayName.toUpperCase()
+                font.family: DisplayState.categoryFont || DisplayState.numberFont
+                font.pixelSize: Math.max(DisplayState.categoryFontSize || (numPx * catScale), 20)
+                font.weight: Font.Bold
+                font.letterSpacing: 1.5
+                color: Qt.rgba(0,0,0,0.7)
+                anchors.topMargin: 2
+                anchors.leftMargin: 1
+            }
+            Text {
+                id: catText
+                anchors.centerIn: parent
+                text: DisplayState.categoryDisplayName.toUpperCase()
+                font.family: DisplayState.categoryFont || DisplayState.numberFont
+                font.pixelSize: Math.max(DisplayState.categoryFontSize || (numPx * catScale), 20)
+                font.weight: Font.Bold
+                font.letterSpacing: 1.5
+                color: "#FFFFFF"
+                style: Text.Raised
+                styleColor: Qt.rgba(0, 0, 0, 0.8)
+            }
         }
     }
 }
@@ -198,18 +185,38 @@ Item {
     // NowServingLabel: still the smallest tier, but now clearly readable —
     // bumped from Font.Light to Font.Bold, higher opacity, and pure white
     // instead of the tinted secondary color so it doesn't wash out against
-    // the glass card. Text is translated via DisplayState.tr().
-    component NowServingLabel: Text {
+    // any background. Text is translated via DisplayState.tr().
+    component NowServingLabel: Item {
         Layout.alignment: Qt.AlignHCenter
-        text: DisplayState.tr("now_serving")
-        font.family: DisplayState.nowServingFont || DisplayState.numberFont
-        font.pixelSize: Math.max(DisplayState.nowServingFontSize || Math.max(root.height * 0.021, 11), 10)
-        font.letterSpacing: 5
-        font.weight: Font.Bold
-        color: root.text_primary
-        opacity: 0.85
-        style: Text.Raised
-        styleColor: Qt.rgba(0, 0, 0, 0.65)
+        Layout.preferredWidth: labelText.implicitWidth
+        Layout.preferredHeight: labelText.implicitHeight
+
+        Text {
+            id: shadowLabel1
+            anchors.centerIn: parent
+            text: DisplayState.tr("now_serving")
+            font.family: DisplayState.nowServingFont || DisplayState.numberFont
+            font.pixelSize: Math.max(DisplayState.nowServingFontSize || Math.max(root.height * 0.021, 11), 10)
+            font.letterSpacing: 5
+            font.weight: Font.Bold
+            color: Qt.rgba(0, 0, 0, 0.75)
+            anchors.topMargin: 4
+            anchors.leftMargin: 2
+        }
+
+        Text {
+            id: labelText
+            anchors.centerIn: parent
+            text: DisplayState.tr("now_serving")
+            font.family: DisplayState.nowServingFont || DisplayState.numberFont
+            font.pixelSize: Math.max(DisplayState.nowServingFontSize || Math.max(root.height * 0.021, 11), 10)
+            font.letterSpacing: 5
+            font.weight: Font.Bold
+            color: root.text_primary
+            opacity: 0.98
+            style: Text.Raised
+            styleColor: Qt.rgba(0, 0, 0, 0.85)
+        }
     }
 
     // ServingNumber: the dominant element — maximum weight, animated
@@ -224,6 +231,20 @@ Item {
         transformOrigin: Item.Center
         transform: Translate { y: root._numTranslateY }
 
+        // Single shadow for performance
+        Text {
+            anchors.centerIn: parent
+            text: root._shownNumber
+            font.family:       DisplayState.numberFont
+            font.pixelSize:    Math.max(DisplayState.numberFontSize || (DisplayState.fontSize * root.numScale * layoutMult), 12)
+            font.weight:       Font.Black
+            font.letterSpacing: root.numLetterSpacing
+            renderType:        Text.NativeRendering
+            color:             Qt.rgba(0, 0, 0, 0.85)
+            anchors.topMargin: 4
+            anchors.leftMargin: 2
+        }
+        // Main text
         Text {
             id: numText
             anchors.centerIn: parent
@@ -235,7 +256,7 @@ Item {
             renderType:        Text.NativeRendering
             color:             root.text_primary
             style:             Text.Raised
-            styleColor:        Qt.rgba(0, 0, 0, 0.70)
+            styleColor:        Qt.rgba(0, 0, 0, 0.9)
         }
     }
 
@@ -521,18 +542,16 @@ Item {
     }
 
     // ── Layout crossfade controller ──────────────────────────────────────
-    property real _classicOpacity:  1
     property real _splitOpacity:    0
-    property real _centeredOpacity: 0
+    property real _centeredOpacity: 1
 
-    Behavior on _classicOpacity  { NumberAnimation { duration: dur_full; easing.type: Easing.OutCubic } }
     Behavior on _splitOpacity    { NumberAnimation { duration: dur_full; easing.type: Easing.OutCubic } }
     Behavior on _centeredOpacity { NumberAnimation { duration: dur_full; easing.type: Easing.OutCubic } }
 
     function _applyLayout(lt) {
-        _classicOpacity  = (lt === "Classic")  ? 1 : 0
-        _splitOpacity    = (lt === "Split")    ? 1 : 0
-        _centeredOpacity = (lt === "Centered") ? 1 : 0
+         _splitOpacity    = (lt === "Split")    ? 1 : 0
+         _centeredOpacity = (lt === "Centered") ? 1 : 0
+         if (lt === "Split" && split_ticker_anim) split_ticker_anim.restart()
     }
 
     Connections {
@@ -542,34 +561,46 @@ Item {
 
     Component.onCompleted: _applyLayout(DisplayState.layoutType)
 
+
+
     // ════════════════════════════════════════════════════════════════════
-    // CLASSIC LAYOUT
-    // Header bar: logo + facility name + clock (all tertiary)
-    // Center:     glass card ▸ NowServingLabel → CategoryBadge → Number → Underline
-    // Footer:     scrolling banner ticker
+    // SPLIT LAYOUT
+    // Left 55%:  glass card ▸ logo → NowServingLabel → CategoryBadge → Number → Underline
+    // Right 45%: "NEXT UP" queue (clearly subordinate)
     // ════════════════════════════════════════════════════════════════════
     Item {
-        id: classic_layout
+        id: split_layout
         anchors.fill: parent
-        opacity: root._classicOpacity
+        opacity: root._splitOpacity
         visible: opacity > 0
+        onVisibleChanged: {
+        if (visible && split_ticker_anim) split_ticker_anim.restart()
+        }
 
-        ColumnLayout {
+        Row {
             anchors.fill: parent
-            spacing: 0
 
-            // ── Header bar ───────────────────────────────────────────────
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Math.max(root.height * 0.11, 52)
-                color: Qt.rgba(0, 0, 0, 0.52)
+            // ── Left panel — primary content ──────────────────────────────
+            Item {
+                width:  parent.width * 0.55
+                height: parent.height
 
-                RowLayout {
-                    anchors { fill: parent; leftMargin: 24; rightMargin: 24 }
-                    spacing: 14
+                Rectangle {
+                    anchors.fill: parent
+                    color: Qt.rgba(0, 0, 0, 0.10)
+                }
 
-                    // Logo
+                // Left panel content column — no glass card
+                ColumnLayout {
+                    id: split_content_col
+                    anchors.centerIn: parent
+                    anchors.verticalCenterOffset: root.numOpticalLift
+                    spacing: 0
+
+                    // Logo — accent badge
                     Rectangle {
+                        Layout.alignment:   Qt.AlignHCenter
+                        Layout.bottomMargin: Math.max(root.height * 0.020, 12)
                         width:  DisplayState.logoSize
                         height: DisplayState.logoSize
                         radius: root.radius_chip
@@ -585,226 +616,30 @@ Item {
                         }
                     }
 
-                    // Facility name — tertiary, fills remaining header space
-                    Text {
-                        text:            DisplayState.facilityName
-                        font.family:     DisplayState.facilityFont || DisplayState.numberFont
-                        font.pixelSize:  Math.max(DisplayState.facilityFontSize || Math.max(root.height * 0.026, 13), 10)
-                        font.weight:     Font.Light
-                        color:           "#FFFFFF"
-                        opacity:         0.55
-                        elide:           Text.ElideRight
-                        Layout.fillWidth: true
-                        style:           Text.Raised
-                        styleColor:      Qt.rgba(0, 0, 0, 0.6)
+                    // Whisper
+                    NowServingLabel {
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.bottomMargin: Math.max(root.height * 0.012, 8)
                     }
 
-                    // Clock — tertiary
-                    Text {
-                        id: clock_classic
-                        font.family:    DisplayState.numberFont
-                        font.pixelSize: Math.max(root.height * 0.024, 12)
-                        font.weight:    Font.Light
-                        color:          "#FFFFFF"
-                        opacity:        0.38
-                        style:          Text.Raised
-                        styleColor:     Qt.rgba(0, 0, 0, 0.5)
-                    }
-                    Timer {
-                        interval: 1000; repeat: true; running: classic_layout.visible
-                        onTriggered: clock_classic.text = Qt.formatTime(new Date(), "HH:mm")
-                    }
-                }
-            }
-
-            // ── Center stage — the only thing that matters ────────────────
-            Item {
-                Layout.fillWidth:  true
-                Layout.fillHeight: true
-
-                // Glass card wrapper: sized to the content column plus
-                // padding, gives the whole stack a stable contrast surface
-                // independent of the background photo.
-                Item {
-                    id: classic_center_wrap
-                    anchors.centerIn: parent
-                    anchors.verticalCenterOffset: root.numOpticalLift
-                    width:  classic_content_col.implicitWidth  + 80
-                    height: classic_content_col.implicitHeight + 56
-
-                    GlassCard { anchors.fill: parent }
-
-                    ColumnLayout {
-                        id: classic_content_col
-                        anchors.centerIn: parent
-                        spacing: 0
-
-                        // 1. Whisper label
-                        NowServingLabel {
-                            Layout.alignment: Qt.AlignHCenter
-                            Layout.bottomMargin: Math.max(root.height * 0.012, 8)
-                        }
-
-                        // 2. Category — now a high-contrast badge
-                        CategoryBadge {
-                            numPx: DisplayState.fontSize * root.numScale * root.numLayoutClassic
-                            catScale: root.catScaleClassic
-                            Layout.bottomMargin: Math.max(root.height * 0.016, 10)
-                        }
-
-                        // 3. NUMBER — dominant
-                        ServingNumber {
-                            layoutMult: root.numLayoutClassic
-                            Layout.alignment: Qt.AlignHCenter
-                            Layout.bottomMargin: Math.max(root.height * 0.014, 8)
-                        }
-
-                        // 4. Accent underline
-                        AccentUnderline {
-                            layoutMult: root.numLayoutClassic
-                            Layout.alignment: Qt.AlignHCenter
-                        }
-                    }
-                }
-            }
-
-            // ── Footer banner ticker ──────────────────────────────────────
-            // DESIGN CHANGE: bolder weight + white + much higher opacity so
-            // it's actually legible, and the scroll animation now runs
-            // unconditionally (not gated on layout visibility) so it never
-            // stalls or has to restart — it's always moving.
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Math.max(root.height * 0.09, 40)
-                color: Qt.rgba(0, 0, 0, 0.42)
-                clip: true
-                visible: DisplayState.bannerEnabled
-
-                Item {
-                    id: ticker_track_classic
-                    anchors.fill: parent
-                    clip: true
-
-                    Row {
-                        id: ticker_row_classic
-                        anchors.verticalCenter: parent.verticalCenter
-                        height: parent.height
-                        spacing: 96
-                        Repeater {
-                            model: 3
-                            Text {
-                                height:            ticker_row_classic.height
-                                verticalAlignment: Text.AlignVCenter
-                                text:              "  ·  " + DisplayState.bannerText
-                                font.family:       DisplayState.bannerFont || DisplayState.numberFont
-                                font.pixelSize:    Math.max(DisplayState.bannerFontSize || Math.max(root.height * 0.025, 12), 10)
-                                font.weight:       Font.DemiBold
-                                color:             root.text_primary
-                                opacity:           0.9
-                                style:             Text.Raised
-                                styleColor:        Qt.rgba(0, 0, 0, 0.6)
-                            }
-                        }
+                    // Category — badge
+                    CategoryBadge {
+                        numPx: DisplayState.fontSize * root.numScale * root.numLayoutSplit
+                        catScale: root.catScaleSplit
+                        Layout.bottomMargin: Math.max(root.height * 0.016, 10)
                     }
 
-                    NumberAnimation {
-                        target: ticker_track_classic
-                        property: "x"
-                        from: 0
-                        to: -ticker_row_classic.width
-                        duration: 16000
-                        loops: Animation.Infinite
-                        running: true
-                        easing.type: Easing.Linear
+                    // Number
+                    ServingNumber {
+                        layoutMult: root.numLayoutSplit
+                        Layout.alignment: Qt.AlignHCenter
+                        Layout.bottomMargin: Math.max(root.height * 0.014, 8)
                     }
-                }
-            }
-        }
-    }
 
-    // ════════════════════════════════════════════════════════════════════
-    // SPLIT LAYOUT
-    // Left 55%:  glass card ▸ logo → NowServingLabel → CategoryBadge → Number → Underline
-    // Right 45%: "NEXT UP" queue (clearly subordinate)
-    // ════════════════════════════════════════════════════════════════════
-    Item {
-        id: split_layout
-        anchors.fill: parent
-        opacity: root._splitOpacity
-        visible: opacity > 0
-
-        Row {
-            anchors.fill: parent
-
-            // ── Left panel — primary content ──────────────────────────────
-            Item {
-                width:  parent.width * 0.55
-                height: parent.height
-
-                Rectangle {
-                    anchors.fill: parent
-                    color: Qt.rgba(0, 0, 0, 0.10)
-                }
-
-                // Glass card behind the stack — same contrast guarantee as Classic
-                Item {
-                    id: split_center_wrap
-                    anchors.centerIn: parent
-                    anchors.verticalCenterOffset: root.numOpticalLift
-                    width:  split_content_col.implicitWidth  + 72
-                    height: split_content_col.implicitHeight + 48
-
-                    GlassCard { anchors.fill: parent }
-
-                    ColumnLayout {
-                        id: split_content_col
-                        anchors.centerIn: parent
-                        spacing: 0
-
-                        // Logo — accent badge
-                        Rectangle {
-                            Layout.alignment:   Qt.AlignHCenter
-                            Layout.bottomMargin: Math.max(root.height * 0.020, 12)
-                            width:  DisplayState.logoSize
-                            height: DisplayState.logoSize
-                            radius: root.radius_chip
-                            color:  root.accent_gold_dim
-                            visible: DisplayState.logoVisible
-                            Behavior on color { ColorAnimation { duration: root.dur_full } }
-                            Image {
-                                anchors { fill: parent; margins: Math.max(3, DisplayState.logoSize * 0.07) }
-                                source:   DisplayState.logoSource
-                                fillMode: Image.PreserveAspectFit
-                                asynchronous: true
-                                sourceSize: Qt.size(DisplayState.logoSize * 2, DisplayState.logoSize * 2)
-                            }
-                        }
-
-                        // Whisper
-                        NowServingLabel {
-                            Layout.alignment: Qt.AlignHCenter
-                            Layout.bottomMargin: Math.max(root.height * 0.012, 8)
-                        }
-
-                        // Category — badge
-                        CategoryBadge {
-                            numPx: DisplayState.fontSize * root.numScale * root.numLayoutSplit
-                            catScale: root.catScaleSplit
-                            Layout.bottomMargin: Math.max(root.height * 0.016, 10)
-                        }
-
-                        // Number
-                        ServingNumber {
-                            layoutMult: root.numLayoutSplit
-                            Layout.alignment: Qt.AlignHCenter
-                            Layout.bottomMargin: Math.max(root.height * 0.014, 8)
-                        }
-
-                        // Underline
-                        AccentUnderline {
-                            layoutMult: root.numLayoutSplit
-                            Layout.alignment: Qt.AlignHCenter
-                        }
+                    // Underline
+                    AccentUnderline {
+                        layoutMult: root.numLayoutSplit
+                        Layout.alignment: Qt.AlignHCenter
                     }
                 }
             }
@@ -822,12 +657,12 @@ Item {
                     Text {
                         text:           DisplayState.tr("next_up")
                         font.family:    DisplayState.uiFont
-                        font.pixelSize: Math.max(root.height * 0.018, 9)
+                        font.pixelSize: Math.max(root.height * 0.024, 12)
                         font.letterSpacing: 5
-                        font.weight:    Font.Light
+                        font.weight:    Font.Bold
                         color:          root.text_secondary
-                        opacity:        0.35
-                        Layout.bottomMargin: 16
+                        opacity:        0.6
+                        Layout.bottomMargin: 20
                         style:          Text.Raised
                         styleColor:     Qt.rgba(0, 0, 0, 0.5)
                     }
@@ -845,7 +680,7 @@ Item {
 
                         delegate: Item {
                             Layout.fillWidth: true
-                            height: 50
+                            height: Math.max(root.height * 0.075, 45)
 
                             Text {
                                 anchors {
@@ -854,12 +689,10 @@ Item {
                                 }
                                 text:           modelData
                                 font.family:    DisplayState.numberFont
-                                // Queue numbers are noticeably smaller than the main number
-                                font.pixelSize: Math.max(root.height * 0.036, 15)
-                                font.weight:    Font.Normal
+                                font.pixelSize: Math.max(root.height * 0.055, 24)
+                                font.weight:    Font.Bold
                                 color:          root.text_primary
-                                // Each successive entry fades more aggressively
-                                opacity:        0.38 - index * 0.07
+                                opacity:        0.85 - index * 0.15
                                 style:          Text.Raised
                                 styleColor:     Qt.rgba(0, 0, 0, 0.55)
                             }
@@ -880,42 +713,30 @@ Item {
                         color: Qt.rgba(0, 0, 0, 0.42)
                         clip: true
 
-                        Item {
-                            id: ticker_track_split
-                            anchors.fill: parent
-                            clip: true
-
-                            Row {
-                                id: ticker_row_split
-                                anchors.verticalCenter: parent.verticalCenter
-                                height: parent.height
-                                spacing: 64
-                                Repeater {
-                                    model: 3
-                                    Text {
-                                        height:            ticker_row_split.height
-                                        verticalAlignment: Text.AlignVCenter
-                                        text:              "  ·  " + DisplayState.bannerText
-                                        font.family:       DisplayState.uiFont
-                                        font.pixelSize:    Math.max(root.height * 0.021, 11)
-                                        font.weight:       Font.DemiBold
-                                        color:             root.text_primary
-                                        opacity:           0.9
-                                        style:             Text.Raised
-                                        styleColor:        Qt.rgba(0, 0, 0, 0.6)
-                                    }
+                        Row {
+                            id: ticker_row_split
+                            height: parent.height
+                            spacing: 0
+                            Repeater {
+                                model: 3
+                                Text {
+                                    height:            ticker_row_split.height
+                                    verticalAlignment: Text.AlignVCenter
+                                    text:              DisplayState.bannerText + "   ·   "
+                                    font.family:       DisplayState.uiFont
+                                    font.pixelSize:    Math.max(root.height * 0.021, 11)
+                                    font.weight:       Font.DemiBold
+                                    color:             root.text_primary
+                                    opacity:           0.9
+                                    style:             Text.Raised
+                                    styleColor:        Qt.rgba(0, 0, 0, 0.6)
                                 }
                             }
-
-                            NumberAnimation {
-                                target: ticker_track_split
-                                property: "x"
-                                from: 0
-                                to: -ticker_row_split.width
-                                duration: 14000
-                                loops: Animation.Infinite
-                                running: true
-                                easing.type: Easing.Linear
+                            NumberAnimation on x {
+                                id: split_ticker_anim
+                                from: 0; to: -(ticker_row_split.width / 3)
+                                duration: 14000; loops: Animation.Infinite
+                                running: true; easing.type: Easing.Linear
                             }
                         }
                     }
@@ -937,78 +758,70 @@ Item {
         opacity: root._centeredOpacity
         visible: opacity > 0
 
-        Item {
-            id: centered_center_wrap
+        // Centered layout content — no glass card
+        ColumnLayout {
+            id: centered_content_col
             anchors.centerIn: parent
             anchors.verticalCenterOffset: root.numOpticalLift
-            width:  centered_content_col.implicitWidth  + 96
-            height: centered_content_col.implicitHeight + 64
+            spacing: 0
 
-            GlassCard { anchors.fill: parent }
-
-            ColumnLayout {
-                id: centered_content_col
-                anchors.centerIn: parent
-                spacing: 0
-
-                // Logo — larger badge than other layouts
-                Rectangle {
-                    Layout.alignment:    Qt.AlignHCenter
-                    Layout.bottomMargin: Math.max(root.height * 0.034, 16)
-                    width:  DisplayState.logoSize * 1.25
-                    height: DisplayState.logoSize * 1.25
-                    radius: root.radius_card
-                    color:  root.accent_gold_dim
-                    visible: DisplayState.logoVisible
-                    Behavior on color { ColorAnimation { duration: root.dur_full } }
-                    Image {
-                        anchors { fill: parent; margins: Math.max(4, DisplayState.logoSize * 0.09) }
-                        source:   DisplayState.logoSource
-                        fillMode: Image.PreserveAspectFit
-                        asynchronous: true
-                        sourceSize: Qt.size(DisplayState.logoSize * 2.5, DisplayState.logoSize * 2.5)
-                    }
+            // Logo — larger badge than other layouts
+            Rectangle {
+                Layout.alignment:    Qt.AlignHCenter
+                Layout.bottomMargin: Math.max(root.height * 0.034, 16)
+                width:  DisplayState.logoSize * 1.25
+                height: DisplayState.logoSize * 1.25
+                radius: root.radius_card
+                color:  root.accent_gold_dim
+                visible: DisplayState.logoVisible
+                Behavior on color { ColorAnimation { duration: root.dur_full } }
+                Image {
+                    anchors { fill: parent; margins: Math.max(4, DisplayState.logoSize * 0.09) }
+                    source:   DisplayState.logoSource
+                    fillMode: Image.PreserveAspectFit
+                    asynchronous: true
+                    sourceSize: Qt.size(DisplayState.logoSize * 2.5, DisplayState.logoSize * 2.5)
                 }
+            }
 
-                // Whisper
-                NowServingLabel {
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.bottomMargin: Math.max(root.height * 0.012, 8)
-                }
+            // Whisper
+            NowServingLabel {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.bottomMargin: Math.max(root.height * 0.012, 8)
+            }
 
-                // Category — badge, largest of the three layouts
-                CategoryBadge {
-                    numPx: DisplayState.fontSize * root.numScale * root.numLayoutCentered
-                    catScale: root.catScaleCentered
-                    Layout.bottomMargin: Math.max(root.height * 0.018, 12)
-                }
+            // Category — badge, largest of the three layouts
+            CategoryBadge {
+                numPx: DisplayState.fontSize * root.numScale * root.numLayoutCentered
+                catScale: root.catScaleCentered
+                Layout.bottomMargin: Math.max(root.height * 0.018, 12)
+            }
 
-                // Number — biggest of all three layouts
-                ServingNumber {
-                    layoutMult: root.numLayoutCentered
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.bottomMargin: Math.max(root.height * 0.016, 10)
-                }
+            // Number — biggest of all three layouts
+            ServingNumber {
+                layoutMult: root.numLayoutCentered
+                Layout.alignment: Qt.AlignHCenter
+                Layout.bottomMargin: Math.max(root.height * 0.016, 10)
+            }
 
-                // Underline
-                AccentUnderline {
-                    layoutMult: root.numLayoutCentered
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.bottomMargin: Math.max(root.height * 0.030, 16)
-                }
+            // Underline
+            AccentUnderline {
+                layoutMult: root.numLayoutCentered
+                Layout.alignment: Qt.AlignHCenter
+                Layout.bottomMargin: Math.max(root.height * 0.030, 16)
+            }
 
-                // Facility name — tertiary, bottom of stack
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text:           DisplayState.facilityName
-                    font.family:    DisplayState.facilityFont || DisplayState.numberFont
-                    font.pixelSize: Math.max(DisplayState.facilityFontSize || Math.max(root.height * 0.022, 10), 10)
-                    font.weight:    Font.Light
-                    color:          root.text_primary
-                    opacity:        0.35
-                    style:          Text.Raised
-                    styleColor:     Qt.rgba(0, 0, 0, 0.5)
-                }
+            // Facility name — tertiary, bottom of stack
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text:           DisplayState.facilityName
+                font.family:    DisplayState.facilityFont || DisplayState.numberFont
+                font.pixelSize: Math.max(DisplayState.facilityFontSize || Math.max(root.height * 0.022, 10), 10)
+                font.weight:    Font.Light
+                color:          root.text_primary
+                opacity:        0.35
+                style:          Text.Raised
+                styleColor:     Qt.rgba(0, 0, 0, 0.5)
             }
         }
 
@@ -1026,13 +839,13 @@ Item {
             Row {
                 id: ticker_row_centered
                 height: parent.height
-                spacing: 96
+                spacing: 0
                 Repeater {
                     model: 3
                     Text {
                         height:            ticker_row_centered.height
                         verticalAlignment: Text.AlignVCenter
-                        text:              "  ·  " + DisplayState.bannerText
+                        text:              DisplayState.bannerText + "   ·   "
                         font.family:       DisplayState.uiFont
                         font.pixelSize:    Math.max(root.height * 0.023, 11)
                         font.weight:       Font.DemiBold

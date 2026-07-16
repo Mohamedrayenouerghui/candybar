@@ -26,7 +26,7 @@ CandyBarV2 is a **self-contained kiosk queue-number display system**.
 | HTTP admin | Python stdlib `http.server` — no framework |
 | Audio | pygame.mixer (playback) + edge-tts (pre-generation script) |
 | Persistence | QSettings INI file |
-| Entry point | `./go` → `python -m app.main` |
+| Entry point | `./run` → `python -m app.main` |
 
 ---
 
@@ -36,7 +36,7 @@ CandyBarV2 is a **self-contained kiosk queue-number display system**.
 CandyBarv2-main/
 │
 ├── run.py                          # Thin wrapper — calls app.main.main()
-├── go                              # One-shot launcher: venv → deps → resources → launch
+├── run                             # One-shot launcher: venv → deps → resources → launch
 ├── requirements.txt
 │
 ├── app/
@@ -326,10 +326,10 @@ audioMuted            audioVolumeStep
 
 ```bash
 # First run (creates venv, installs deps, compiles resources, generates audio)
-./go
+./run
 
 # Subsequent runs
-./go
+./run
 
 # The display opens fullscreen. Admin panel: http://<LAN-IP>:8080/admin
 # Default PIN: 1234

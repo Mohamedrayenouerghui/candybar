@@ -14,7 +14,7 @@ Window {
 
     Component.onCompleted: {
         FluTheme.darkMode = FluThemeType.DarkMode.Dark
-        FluTheme.animationEnabled = true
+        FluTheme.animationEnabled = false
 
         // Populate URLs from NetworkHelper
         DisplayState.publicUrl = NetworkHelper.publicUrl

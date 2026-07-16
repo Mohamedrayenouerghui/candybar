@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
   <title>Now Serving</title>
   <style>
+    @font-face{font-family:'Barriecito';src:url('/fonts/Barriecito-Regular.ttf') format('truetype')}
+    @font-face{font-family:'DT Getai Grotesk Display Black';src:url('/fonts/DTGetaiGroteskDisplay-Black.otf') format('opentype')}
+    @font-face{font-family:'Gluten';src:url('/fonts/Gluten-Regular.ttf') format('truetype')}
+    @font-face{font-family:'LC Mogi';src:url('/fonts/LCMogi-A.otf') format('opentype')}
+    @font-face{font-family:'Manosque';src:url('/fonts/Manosque-Regular.otf') format('opentype')}
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
@@ -216,6 +221,18 @@
     } else {
       document.getElementById('next_up_section').classList.remove('visible');
     }
+
+    // Apply font families
+    if (d.numberFont) {
+      document.getElementById('number').style.fontFamily = `'${d.numberFont}', 'DM Mono', monospace`;
+    }
+    if (d.facilityFont) {
+      document.getElementById('facility').style.fontFamily = `'${d.facilityFont}', 'DM Mono', monospace`;
+    }
+    if (d.nowServingFont) {
+      const labels = document.querySelectorAll('.label, .next-up-label');
+      labels.forEach(el => el.style.fontFamily = `'${d.nowServingFont}', 'Inter', sans-serif`);
+    }
   }
 
   function setNumber(val, animate = true) {
@@ -249,6 +266,12 @@
     const list = document.getElementById('next_up_list');
     list.innerHTML = nums.slice(0,4).map(n => `<span class="next-up-item">${n}</span>`).join('');
     sec.classList.add('visible');
+
+    // Apply font to next up items
+    const font = document.getElementById('number').style.fontFamily;
+    if (font) {
+      document.querySelectorAll('.next-up-item').forEach(el => el.style.fontFamily = font);
+    }
   }
 
   // MQTT live updates
@@ -273,6 +296,16 @@
     if (key === 'currentNumber') setNumber(payload);
     if (key === 'accentColor')   setAccent(payload);
     if (key === 'facilityName')  document.getElementById('facility').textContent = payload;
+    if (key === 'numberFont') {
+      document.getElementById('number').style.fontFamily = `'${payload}', 'DM Mono', monospace`;
+      document.querySelectorAll('.next-up-item').forEach(el => el.style.fontFamily = `'${payload}', 'DM Mono', monospace`);
+    }
+    if (key === 'facilityFont') {
+      document.getElementById('facility').style.fontFamily = `'${payload}', 'DM Mono', monospace`;
+    }
+    if (key === 'nowServingFont') {
+      document.querySelectorAll('.label, .next-up-label').forEach(el => el.style.fontFamily = `'${payload}', 'Inter', sans-serif`);
+    }
     if (key === 'layoutType' || key === 'nextUp') {
       // Reload full state to keep next-up visibility consistent
       loadState();

@@ -33,8 +33,11 @@
         <file>app/res/image/ff_red_waves.jpg</file>
         <file>app/res/image/ff_burger_pattern.jpg</file>
 
-        <!-- Fonts: DM Mono for tabular number display -->
-        <file>app/res/font/DMMono-Regular.otf</file>
-        <file>app/res/font/DMMono-Medium.otf</file>
+        <!-- Fonts: Custom display fonts -->
+        <file>app/res/font/Barriecito-Regular.ttf</file>
+        <file>app/res/font/DTGetaiGroteskDisplay-Black.otf</file>
+        <file>app/res/font/Gluten-Regular.ttf</file>
+        <file>app/res/font/LCMogi-A.otf</file>
+        <file>app/res/font/Manosque-Regular.otf</file>
     </qresource>
 </RCC>

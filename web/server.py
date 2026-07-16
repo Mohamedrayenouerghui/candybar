@@ -23,8 +23,13 @@ import mimetypes
 import os
 import re
 import socket
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from PySide6.QtCore import QFile, QStandardPaths
+from src.logging import get_logger
+
+logger = get_logger()
 
 MAX_LOGO_BYTES = 2 * 1024 * 1024   # 2 MB
 MAX_BG_BYTES   = 5 * 1024 * 1024   # 5 MB
@@ -32,13 +37,17 @@ MAX_FONT_BYTES = 2 * 1024 * 1024   # 2 MB
 
 PORT      = 8080
 SERVE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = ""  # set in run() before server starts
 
-# These are injected by run() so Handler methods can reference them
-_mqtt_client        = None
-_display_persistence = None
-_usage_stats        = None
-_font_manager       = None
+# Cache for QRC resources
+_qrc_cache = {}
+
+# Try to import Pillow for image resizing
+try:
+    from PIL import Image
+    HAS_PILLOW = True
+except ImportError:
+    HAS_PILLOW = False
+    logger.warning("Pillow not installed. Uploaded images won't be resized.")
 
 
 def _get_local_ip() -> str:
@@ -90,345 +99,431 @@ def _parse_multipart(content_type: str, content_length: int, rfile):
     return result
 
 
-class Handler(http.server.BaseHTTPRequestHandler):
+def create_handler(upload_dir, mqtt_client, display_persistence, usage_stats, font_manager):
+    """Factory function to create a Handler class with access to dependencies."""
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def log_message(self, fmt, *args):
+            logger.info(f"[admin-web] {self.address_string()} {fmt % args}")
 
-    def log_message(self, fmt, *args):
-        print(f"[admin-web] {self.address_string()} {fmt % args}")
+        # ── routing ───────────────────────────────────────────────────────────
 
-    # ── routing ───────────────────────────────────────────────────────────
+        def do_GET(self):
+            path = self.path.split("?")[0]
+            if path in ("/", ""):
+                self._serve_file("public.html")
+            elif path == "/admin":
+                self._serve_file("admin.html")
+            elif path.startswith("/uploads/"):
+                self._serve_static(os.path.join(upload_dir, path[len("/uploads/"):]))
+            elif path.startswith("/videos/"):
+                video_name = path[len("/videos/"):]
+                self._serve_static(os.path.join(SERVE_DIR, "videos", video_name))
+            elif path.startswith("/fonts/"):
+                font_name = path[len("/fonts/"):]
+                allowed_fonts = {
+                    "Barriecito-Regular.ttf": ":/app/res/font/Barriecito-Regular.ttf",
+                    "DTGetaiGroteskDisplay-Black.otf": ":/app/res/font/DTGetaiGroteskDisplay-Black.otf",
+                    "Gluten-Regular.ttf": ":/app/res/font/Gluten-Regular.ttf",
+                    "LCMogi-A.otf": ":/app/res/font/LCMogi-A.otf",
+                    "Manosque-Regular.otf": ":/app/res/font/Manosque-Regular.otf"
+                }
+                if font_name in allowed_fonts:
+                    mime = "font/otf" if font_name.endswith(".otf") else "font/ttf"
+                    self._serve_qrc(allowed_fonts[font_name], mime)
+                else:
+                    self._send(404, "text/plain", b"Not found")
+            elif path == "/favicon.ico":
+                self._serve_qrc(":/app/res/image/favicon.ico", "image/x-icon")
+            elif path.startswith("/api/bg_thumb/"):
+                bg_id = path[len("/api/bg_thumb/"):]
+                if bg_id and all(c.isalnum() or c == '_' for c in bg_id):
+                    self._serve_qrc(f":/app/res/image/{bg_id}.jpg", "image/jpeg")
+                else:
+                    self._send(404, "text/plain", b"Not found")
+            elif path == "/api/state":
+                self._json_response(self._build_state())
+            elif path == "/api/stats":
+                self._json_response(usage_stats.as_dict())
+            elif path == "/api/fonts":
+                self._handle_get_fonts()
+            else:
+                self._serve_file(path.lstrip("/"))
 
-    def do_GET(self):
-        path = self.path.split("?")[0]
-        if path in ("/", ""):
-            self._serve_file("public.html")
-        elif path == "/admin":
-            self._serve_file("admin.html")
-        elif path.startswith("/uploads/"):
-            self._serve_static(os.path.join(UPLOAD_DIR, path[len("/uploads/"):]))
-        elif path.startswith("/videos/"):
-            video_name = path[len("/videos/"):]
-            self._serve_static(os.path.join(SERVE_DIR, "videos", video_name))
-        elif path == "/favicon.ico":
-            self._serve_qrc(":/app/res/image/favicon.ico", "image/x-icon")
-        elif path.startswith("/api/bg_thumb/"):
-            bg_id = path[len("/api/bg_thumb/"):]
-            if bg_id and all(c.isalnum() or c == '_' for c in bg_id):
-                self._serve_qrc(f":/app/res/image/{bg_id}.jpg", "image/jpeg")
+        def do_POST(self):
+            path = self.path.split("?")[0]
+            if path == "/api/pin":
+                self._handle_pin()
+            elif path == "/api/publish":
+                self._handle_publish()
+            elif path == "/api/publish_batch":
+                self._handle_publish_batch()
+            elif path == "/api/logo":
+                self._handle_upload("logo", MAX_LOGO_BYTES, (".png", ".jpg", ".jpeg", ".svg"))
+            elif path == "/api/background":
+                self._handle_upload("background", MAX_BG_BYTES, (".png", ".jpg", ".jpeg"))
+            elif path == "/api/font":
+                self._handle_font()
             else:
                 self._send(404, "text/plain", b"Not found")
-        elif path == "/api/state":
-            self._json_response(self._build_state())
-        elif path == "/api/stats":
-            self._json_response(_usage_stats.as_dict())
-        elif path == "/api/fonts":
-            self._handle_get_fonts()
-        else:
-            self._serve_file(path.lstrip("/"))
 
-    def do_POST(self):
-        path = self.path.split("?")[0]
-        if path == "/api/pin":
-            self._handle_pin()
-        elif path == "/api/publish":
-            self._handle_publish()
-        elif path == "/api/logo":
-            self._handle_upload("logo", MAX_LOGO_BYTES, (".png", ".jpg", ".jpeg", ".svg"))
-        elif path == "/api/background":
-            self._handle_upload("background", MAX_BG_BYTES, (".png", ".jpg", ".jpeg"))
-        elif path == "/api/font":
-            self._handle_font()
-        else:
-            self._send(404, "text/plain", b"Not found")
+        # ── POST handlers ─────────────────────────────────────────────────────
 
-    # ── POST handlers ─────────────────────────────────────────────────────
-
-    def _handle_pin(self):
-        body = self._read_json()
-        if body is None:
-            return
-        entered = str(body.get("pin", "")).strip()
-        correct = str(_display_persistence.get_pin()).strip()
-        ok = entered == correct
-        print(f"[pin] entered={entered!r} correct={correct!r} ok={ok}")
-        self._json_response({"ok": ok})
-
-    def _handle_publish(self):
-        body = self._read_json()
-        if body is None:
-            return
-        topic   = str(body.get("topic", ""))
-        payload = str(body.get("payload", ""))
-        if not topic.startswith("display/"):
-            self._json_response({"ok": False, "error": "bad topic"})
-            return
-
-        key      = topic[len("display/"):]
-        category = _display_persistence.load("category", "A")
-
-        # Persist — two keys need type coercion, everything else is a direct save
-        if key == "adminPin":
-            _display_persistence.set_pin(payload)
-        elif key == "fontSize":
-            _display_persistence.save("fontSize", int(payload))
-        elif key in ("numberFontSize", "categoryFontSize", "facilityFontSize", "bannerFontSize", "nowServingFontSize"):
-            _display_persistence.save(key, int(payload))
-        elif key == "logoSize":
-            _display_persistence.save("logoSize", int(payload))
-        elif key == "audioVolumeStep":
-            _display_persistence.save("audioVolumeStep", int(payload))
-        else:
-            _display_persistence.save(key, payload)
-
-        # Push to QML display (works without a broker)
-        _mqtt_client.direct_command(key, payload)
-        # Also publish via MQTT if connected
-        _mqtt_client.publish(f"display/{category}/{key}", payload)
-
-        if key == "currentNumber":
-            _usage_stats.record_number_change()
-
-        self._json_response({"ok": True})
-
-    def _handle_upload(self, field: str, max_bytes: int, allowed_exts: tuple):
-        """Generic file upload handler for logo and background."""
-        ctype          = self.headers.get("Content-Type", "")
-        content_length = int(self.headers.get("Content-Length", 0))
-        if content_length > max_bytes:
-            self._json_response({"ok": False, "error": f"file too large (max {max_bytes // (1024*1024)} MB)"})
-            return
-        try:
-            parsed = _parse_multipart(ctype, content_length, self.rfile)
-            if not parsed or field not in parsed['files']:
-                self._json_response({"ok": False, "error": "no file"})
+        def _handle_pin(self):
+            body = self._read_json()
+            if body is None:
                 return
-            file_item = parsed['files'][field]
-            data      = file_item['data']
-            ext       = os.path.splitext(file_item['filename'])[1].lower()
-            if len(data) > max_bytes:
-                self._json_response({"ok": False, "error": "file too large"})
-                return
-            if ext not in allowed_exts:
-                self._json_response({"ok": False, "error": f"unsupported format (allowed: {', '.join(allowed_exts)})"})
-                return
-            dest_path = os.path.join(UPLOAD_DIR, f"{field}{ext}")
-            with open(dest_path, "wb") as f:
-                f.write(data)
-            category = _display_persistence.load("category", "A")
-            if field == "logo":
-                _display_persistence.save("logoPath", dest_path)
-                _mqtt_client.direct_command("logoSource", dest_path)
-                _mqtt_client.publish(f"display/{category}/logoSource", dest_path)
+            entered = str(body.get("pin", "")).strip()
+            correct = str(display_persistence.get_pin()).strip()
+            ok = entered == correct
+            logger.info(f"[pin] entered={entered!r} correct={correct!r} ok={ok}")
+            self._json_response({"ok": ok})
+
+        def _persist_and_publish(self, key, payload):
+            """Helper to persist a single key and publish it (used by both single and batch)."""
+            category = display_persistence.load("category", "A")
+
+            if key == "adminPin":
+                display_persistence.set_pin(payload)
+            elif key == "fontSize":
+                display_persistence.save("fontSize", int(payload))
+            elif key in ("numberFontSize", "categoryFontSize", "facilityFontSize", "bannerFontSize", "nowServingFontSize"):
+                display_persistence.save(key, int(payload))
+            elif key == "logoSize":
+                display_persistence.save("logoSize", int(payload))
+            elif key == "audioVolumeStep":
+                display_persistence.save("audioVolumeStep", int(payload))
             else:
-                _display_persistence.save("backgroundImage", dest_path)
-                _mqtt_client.direct_command("backgroundImage", dest_path)
-                _mqtt_client.publish(f"display/{category}/backgroundImage", dest_path)
-            self._json_response({"ok": True, "url": f"/uploads/{field}{ext}", "path": dest_path})
-        except Exception as exc:
-            self._json_response({"ok": False, "error": str(exc)})
+                display_persistence.save(key, payload)
 
-    def _handle_font(self):
-        ctype          = self.headers.get("Content-Type", "")
-        content_length = int(self.headers.get("Content-Length", 0))
-        if content_length > MAX_FONT_BYTES:
-            self._json_response({"ok": False, "error": "file too large (max 2 MB)"})
-            return
-        try:
-            parsed = _parse_multipart(ctype, content_length, self.rfile)
-            if not parsed or 'font' not in parsed['files']:
-                self._json_response({"ok": False, "error": "no file"})
+            if key == "categoryDisplayName":
+                cats_str = str(display_persistence.load("categoriesList", "Category A"))
+                cats = [c.strip() for c in cats_str.split(",") if c.strip()]
+                new_cat = payload.strip()
+                if new_cat and new_cat not in cats:
+                    cats.append(new_cat)
+                    display_persistence.save("categoriesList", ",".join(cats))
+
+            mqtt_client.direct_command(key, payload)
+            mqtt_client.publish(f"display/{category}/{key}", payload)
+
+            if key == "currentNumber":
+                usage_stats.record_number_change()
+
+        def _handle_publish(self):
+            body = self._read_json()
+            if body is None:
                 return
-            file_item = parsed['files']['font']
-            data      = file_item['data']
-            ext       = os.path.splitext(file_item['filename'])[1].lower()
-            if len(data) > MAX_FONT_BYTES:
-                self._json_response({"ok": False, "error": "file too large"})
+            topic   = str(body.get("topic", ""))
+            payload = str(body.get("payload", ""))
+            if not topic.startswith("display/"):
+                self._json_response({"ok": False, "error": "bad topic"})
                 return
-            if ext not in (".ttf", ".otf"):
-                self._json_response({"ok": False, "error": "unsupported format (only TTF/OTF)"})
+
+            key = topic[len("display/"):]
+            self._persist_and_publish(key, payload)
+            self._json_response({"ok": True})
+
+        def _handle_publish_batch(self):
+            body = self._read_json()
+            if body is None:
                 return
-            temp_path = os.path.join(UPLOAD_DIR, f"temp_font_upload{ext}")
-            with open(temp_path, "wb") as f:
-                f.write(data)
-            family = _font_manager.registerFont(temp_path)
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-            if not family:
-                self._json_response({"ok": False, "error": "invalid font file or registration failed"})
+            items = body.get("items", [])
+            for item in items:
+                topic = str(item.get("topic", ""))
+                payload = str(item.get("payload", ""))
+                if not topic.startswith("display/"):
+                    self._json_response({"ok": False, "error": "bad topic in batch"})
+                    return
+                key = topic[len("display/"):]
+                self._persist_and_publish(key, payload)
+            self._json_response({"ok": True})
+
+        def _handle_upload(self, field: str, max_bytes: int, allowed_exts: tuple):
+            """Generic file upload handler for logo and background."""
+            ctype          = self.headers.get("Content-Type", "")
+            content_length = int(self.headers.get("Content-Length", 0))
+            if content_length > max_bytes:
+                self._json_response({"ok": False, "error": f"file too large (max {max_bytes // (1024*1024)} MB)"})
                 return
-            self._json_response({"ok": True, "family": family})
-        except Exception as exc:
-            self._json_response({"ok": False, "error": str(exc)})
-
-    def _handle_get_fonts(self):
-        try:
-            fonts = [
-                {"family": f["family"], "url": f"/uploads/fonts/{f['filename']}", "filename": f["filename"]}
-                for f in _font_manager.listFonts()
-            ]
-            self._json_response({"ok": True, "fonts": fonts})
-        except Exception as exc:
-            self._json_response({"ok": False, "error": str(exc)})
-
-    # ── state builder ─────────────────────────────────────────────────────
-
-    def _build_state(self) -> dict:
-        p = _display_persistence
-        logo_path = p.logo_path()
-        logo_url  = f"/uploads/{os.path.basename(logo_path)}" if logo_path and os.path.exists(logo_path) else ""
-
-        bg_path = p.background_path()
-        if not bg_path:
-            bg_url = "qrc:/app/res/image/ff_burger_pattern.jpg"
-        elif bg_path.startswith("qrc:"):
-            bg_url = bg_path
-        elif os.path.exists(bg_path):
-            bg_url = f"/uploads/{os.path.basename(bg_path)}"
-        else:
-            bg_url = bg_path
-
-        return {
-            "currentNumber":          p.get_current_number(),
-            "nextUp":                 p.get_next_up(),
-            "layoutType":             p.get_layout(),
-            "accentColor":            p.load("accentColor", "#FFB84D"),
-            "accentGradientEnabled":  p.load("accentGradientEnabled", "false"),
-            "accentGradientDirection":p.load("accentGradientDirection", "top-to-bottom"),
-            "bannerText":             p.get_banner(),
-            "bannerEnabled":          p.load("bannerEnabled", "true"),
-            "facilityName":           p.get_facility(),
-            "fontSize":               p.get_font_size(),
-            "numberFontSize":         p.get_text_size("numberFontSize", p.get_font_size()),
-            "categoryFontSize":       p.get_text_size("categoryFontSize", 34),
-            "facilityFontSize":       p.get_text_size("facilityFontSize", 24),
-            "bannerFontSize":         p.get_text_size("bannerFontSize", 24),
-            "nowServingFontSize":     p.get_text_size("nowServingFontSize", 16),
-            "logoSize":               p.get_logo_size(),
-            "numberFont":             p.load("numberFont", "DM Mono"),
-            "categoryFont":           p.load("categoryFont", p.load("numberFont", "DM Mono")),
-            "facilityFont":           p.load("facilityFont", p.load("numberFont", "DM Mono")),
-            "bannerFont":             p.load("bannerFont", p.load("numberFont", "DM Mono")),
-            "nowServingFont":         p.load("nowServingFont", p.load("numberFont", "DM Mono")),
-            "logoUrl":                logo_url,
-            "logoVisible":            p.load("logoVisible", "true"),
-            "logoPosition":           p.load("logoPosition", "top-left"),
-            "backgroundImage":        bg_url,
-            "backgroundFitMode":     p.load("backgroundFitMode", "crop"),
-            "backgroundScale":       p.load("backgroundScale", "1.0"),
-            "backgroundOffsetX":     p.load("backgroundOffsetX", "0"),
-            "backgroundOffsetY":     p.load("backgroundOffsetY", "0"),
-            "backgroundOrientation":  p.load("backgroundOrientation", "portrait"),
-            "backgroundType":         p.load("backgroundType", "image"),
-            "backgroundVideoSource":  p.load("backgroundVideoSource", ""),
-            "category":               p.load("category", "A"),
-            "categoryDisplayName":    p.load("categoryDisplayName", "Category A"),
-            "ttsLanguage":            p.load("ttsLanguage", "en"),
-            "displayLanguage":        p.load("displayLanguage", "en"),
-            "ttsEnabled":             p.load("ttsEnabled", "true"),
-            "audioMuted":             p.load("audioMuted", "false"),
-            "audioVolumeStep":        p.load("audioVolumeStep", "3"),
-        }
-
-    # ── low-level helpers ─────────────────────────────────────────────────
-
-    def _serve_qrc(self, qrc_path: str, mime: str):
-        qf = QFile(qrc_path)
-        if qf.open(QFile.OpenModeFlag.ReadOnly):
-            data = qf.readAll().data()
-            qf.close()
-            self._send(200, mime, data)
-        else:
-            self._send(404, "text/plain", b"Not found")
-
-    def _serve_file(self, name: str):
-        self._serve_static(os.path.join(SERVE_DIR, name))
-
-    def _serve_static(self, fpath: str):
-        if not os.path.isfile(fpath):
-            self._send(404, "text/plain", b"Not found")
-            return
-        
-        file_size = os.path.getsize(fpath)
-        mime, _ = mimetypes.guess_type(fpath)
-        range_header = self.headers.get("Range")
-        
-        if range_header:
-            # Parse Range header (e.g., bytes=0-100)
-            match = re.match(r"bytes=(\d+)-(\d*)", range_header)
-            if match:
-                start = int(match.group(1))
-                end_str = match.group(2)
-                end = int(end_str) if end_str else file_size - 1
-                
-                if start >= file_size:
-                    self._send(416, "text/plain", b"Requested Range Not Satisfiable")
+            try:
+                parsed = _parse_multipart(ctype, content_length, self.rfile)
+                if not parsed or field not in parsed['files']:
+                    self._json_response({"ok": False, "error": "no file"})
+                    return
+                file_item = parsed['files'][field]
+                data      = file_item['data']
+                ext       = os.path.splitext(file_item['filename'])[1].lower()
+                if len(data) > max_bytes:
+                    self._json_response({"ok": False, "error": "file too large"})
+                    return
+                if ext not in allowed_exts:
+                    self._json_response({"ok": False, "error": f"unsupported format (allowed: {', '.join(allowed_exts)})"})
                     return
                 
-                end = min(end, file_size - 1)
-                length = end - start + 1
+                # Resize image if it's a background and Pillow is available
+                processed_data = data
+                if field == "background" and HAS_PILLOW and ext in (".png", ".jpg", ".jpeg"):
+                    from io import BytesIO
+                    try:
+                        img = Image.open(BytesIO(data))
+                        
+                        # Resize to max 1080x1920 (portrait) or 1920x1080 (landscape)
+                        max_width, max_height = 1920, 1080
+                        img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+                        
+                        # Convert to RGB if needed (for PNGs with alpha)
+                        if img.mode in ("RGBA", "P"):
+                            img = img.convert("RGB")
+                        
+                        # Re-encode as JPEG with quality 85
+                        output = BytesIO()
+                        img.save(output, format="JPEG", quality=85)
+                        processed_data = output.getvalue()
+                        ext = ".jpg"
+                    except Exception as e:
+                        logger.warning(f"Failed to resize image, using original: {e}")
                 
-                with open(fpath, "rb") as f:
-                    f.seek(start)
-                    data = f.read(length)
-                
-                self.send_response(206)  # Partial Content
-                self.send_header("Content-Type", mime or "application/octet-stream")
-                self.send_header("Content-Length", str(length))
-                self.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
-                self.send_header("Accept-Ranges", "bytes")
-                self.send_header("Access-Control-Allow-Origin", "*")
-                self.end_headers()
-                self.wfile.write(data)
+                dest_path = os.path.join(upload_dir, f"{field}{ext}")
+                with open(dest_path, "wb") as f:
+                    f.write(processed_data)
+                category = display_persistence.load("category", "A")
+                if field == "logo":
+                    display_persistence.save("logoPath", dest_path)
+                    mqtt_client.direct_command("logoSource", dest_path)
+                    mqtt_client.publish(f"display/{category}/logoSource", dest_path)
+                else:
+                    display_persistence.save("backgroundImage", dest_path)
+                    mqtt_client.direct_command("backgroundImage", dest_path)
+                    mqtt_client.publish(f"display/{category}/backgroundImage", dest_path)
+                self._json_response({"ok": True, "url": f"/uploads/{field}{ext}", "path": dest_path})
+            except Exception as exc:
+                self._json_response({"ok": False, "error": str(exc)})
+
+        def _handle_font(self):
+            ctype          = self.headers.get("Content-Type", "")
+            content_length = int(self.headers.get("Content-Length", 0))
+            if content_length > MAX_FONT_BYTES:
+                self._json_response({"ok": False, "error": "file too large (max 2 MB)"})
                 return
-        
-        # No range requested, send entire file
-        with open(fpath, "rb") as f:
-            data = f.read()
-        
-        self.send_response(200)
-        self.send_header("Content-Type", mime or "application/octet-stream")
-        self.send_header("Content-Length", str(len(data)))
-        self.send_header("Accept-Ranges", "bytes")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        self.wfile.write(data)
+            try:
+                parsed = _parse_multipart(ctype, content_length, self.rfile)
+                if not parsed or 'font' not in parsed['files']:
+                    self._json_response({"ok": False, "error": "no file"})
+                    return
+                file_item = parsed['files']['font']
+                data      = file_item['data']
+                ext       = os.path.splitext(file_item['filename'])[1].lower()
+                if len(data) > MAX_FONT_BYTES:
+                    self._json_response({"ok": False, "error": "file too large"})
+                    return
+                if ext not in (".ttf", ".otf"):
+                    self._json_response({"ok": False, "error": "unsupported format (only TTF/OTF)"})
+                    return
+                temp_path = os.path.join(upload_dir, f"temp_font_upload{ext}")
+                with open(temp_path, "wb") as f:
+                    f.write(data)
+                family = font_manager.registerFont(temp_path)
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                if not family:
+                    self._json_response({"ok": False, "error": "invalid font file or registration failed"})
+                    return
+                self._json_response({"ok": True, "family": family})
+            except Exception as exc:
+                self._json_response({"ok": False, "error": str(exc)})
 
-    def _json_response(self, obj: dict):
-        self._send(200, "application/json", json.dumps(obj).encode())
+        def _handle_get_fonts(self):
+            try:
+                fonts = [
+                    {"family": "Barriecito", "url": "/fonts/Barriecito-Regular.ttf", "filename": "Barriecito-Regular.ttf"},
+                    {"family": "DT Getai Grotesk Display Black", "url": "/fonts/DTGetaiGroteskDisplay-Black.otf", "filename": "DTGetaiGroteskDisplay-Black.otf"},
+                    {"family": "Gluten", "url": "/fonts/Gluten-Regular.ttf", "filename": "Gluten-Regular.ttf"},
+                    {"family": "LC Mogi", "url": "/fonts/LCMogi-A.otf", "filename": "LCMogi-A.otf"},
+                    {"family": "Manosque", "url": "/fonts/Manosque-Regular.otf", "filename": "Manosque-Regular.otf"},
+                ]
+                for f in font_manager.listFonts():
+                    fonts.append({
+                        "family": f["family"],
+                        "url": f"/uploads/fonts/{f['filename']}",
+                        "filename": f["filename"]
+                    })
+                self._json_response({"ok": True, "fonts": fonts})
+            except Exception as exc:
+                self._json_response({"ok": False, "error": str(exc)})
 
-    def _send(self, code: int, mime: str, body: bytes):
-        self.send_response(code)
-        self.send_header("Content-Type", mime)
-        self.send_header("Content-Length", len(body))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        self.wfile.write(body)
+        # ── state builder ─────────────────────────────────────────────────────
 
-    def _read_json(self):
-        try:
-            length = int(self.headers.get("Content-Length", 0))
-            return json.loads(self.rfile.read(length))
-        except Exception:
-            self._send(400, "text/plain", b"Bad JSON")
-            return None
+        def _build_state(self) -> dict:
+            p = display_persistence
+            cats_str = str(p.load("categoriesList", "Category A"))
+            categories = [c.strip() for c in cats_str.split(",") if c.strip()]
+            current_cat = str(p.load("categoryDisplayName", "Category A"))
+            if current_cat not in categories:
+                categories.append(current_cat)
+
+            logo_path = p.logo_path()
+            logo_url  = f"/uploads/{os.path.basename(logo_path)}" if logo_path and os.path.exists(logo_path) else ""
+
+            bg_path = p.background_path()
+            if not bg_path:
+                bg_url = "qrc:/app/res/image/ff_burger_pattern.jpg"
+            elif bg_path.startswith("qrc:"):
+                bg_url = bg_path
+            elif os.path.exists(bg_path):
+                bg_url = f"/uploads/{os.path.basename(bg_path)}"
+            else:
+                bg_url = bg_path
+
+            return {
+                "currentNumber":          p.get_current_number(),
+                "nextUp":                 p.get_next_up(),
+                "layoutType":             p.get_layout(),
+                "accentColor":            p.load("accentColor", "#FFB84D"),
+                "accentGradientEnabled":  p.load("accentGradientEnabled", "false"),
+                "accentGradientDirection":p.load("accentGradientDirection", "top-to-bottom"),
+                "bannerText":             p.get_banner(),
+                "bannerEnabled":          p.load("bannerEnabled", "true"),
+                "facilityName":           p.get_facility(),
+                "fontSize":               p.get_font_size(),
+                "numberFontSize":         p.get_text_size("numberFontSize", p.get_font_size()),
+                "categoryFontSize":       p.get_text_size("categoryFontSize", 34),
+                "facilityFontSize":       p.get_text_size("facilityFontSize", 24),
+                "bannerFontSize":         p.get_text_size("bannerFontSize", 24),
+                "nowServingFontSize":     p.get_text_size("nowServingFontSize", 16),
+                "logoSize":               p.get_logo_size(),
+                "numberFont":             p.load("numberFont", "DM Mono"),
+                "categoryFont":           p.load("categoryFont", p.load("numberFont", "DM Mono")),
+                "facilityFont":           p.load("facilityFont", p.load("numberFont", "DM Mono")),
+                "bannerFont":             p.load("bannerFont", p.load("numberFont", "DM Mono")),
+                "nowServingFont":         p.load("nowServingFont", p.load("numberFont", "DM Mono")),
+                "logoUrl":                logo_url,
+                "logoVisible":            p.load("logoVisible", "true"),
+                "logoPosition":           p.load("logoPosition", "top-left"),
+                "backgroundImage":        bg_url,
+                "backgroundFitMode":     p.load("backgroundFitMode", "crop"),
+                "backgroundScale":       p.load("backgroundScale", "1.0"),
+                "backgroundOffsetX":     p.load("backgroundOffsetX", "0"),
+                "backgroundOffsetY":     p.load("backgroundOffsetY", "0"),
+                "backgroundOrientation":  p.load("backgroundOrientation", "portrait"),
+                "backgroundType":         p.load("backgroundType", "image"),
+                "backgroundVideoSource":  p.load("backgroundVideoSource", ""),
+                "category":               p.load("category", "A"),
+                "categoryDisplayName":    p.load("categoryDisplayName", "Category A"),
+                "ttsLanguage":            p.load("ttsLanguage", "en"),
+                "displayLanguage":        p.load("displayLanguage", "en"),
+                "ttsEnabled":             p.load("ttsEnabled", "true"),
+                "audioMuted":             p.load("audioMuted", "false"),
+                "audioVolumeStep":        p.load("audioVolumeStep", "3"),
+                "categories":             categories,
+            }
+
+        # ── low-level helpers ─────────────────────────────────────────────────
+
+        def _serve_qrc(self, qrc_path: str, mime: str):
+            if qrc_path in _qrc_cache:
+                data = _qrc_cache[qrc_path]
+            else:
+                qf = QFile(qrc_path)
+                if qf.open(QFile.OpenModeFlag.ReadOnly):
+                    data = qf.readAll().data()
+                    qf.close()
+                    _qrc_cache[qrc_path] = data
+                else:
+                    logger.warning(f"Failed to open QRC resource: {qrc_path}")
+                    self._send(404, "text/plain", b"Not found")
+                    return
+            self.send_response(200)
+            self.send_header("Content-Type", mime)
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "public, max-age=31536000, immutable")
+            self.end_headers()
+            self.wfile.write(data)
+
+        def _serve_file(self, name: str):
+            self._serve_static(os.path.join(SERVE_DIR, name))
+
+        def _serve_static(self, fpath: str):
+            if not os.path.isfile(fpath):
+                self._send(404, "text/plain", b"Not found")
+                return
+            
+            file_size = os.path.getsize(fpath)
+            mime, _ = mimetypes.guess_type(fpath)
+            range_header = self.headers.get("Range")
+            
+            if range_header:
+                # Parse Range header (e.g., bytes=0-100)
+                match = re.match(r"bytes=(\d+)-(\d*)", range_header)
+                if match:
+                    start = int(match.group(1))
+                    end_str = match.group(2)
+                    end = int(end_str) if end_str else file_size - 1
+                    
+                    if start >= file_size:
+                        self._send(416, "text/plain", b"Requested Range Not Satisfiable")
+                        return
+                    
+                    end = min(end, file_size - 1)
+                    length = end - start + 1
+                    
+                    with open(fpath, "rb") as f:
+                        f.seek(start)
+                        data = f.read(length)
+                    
+                    self.send_response(206)  # Partial Content
+                    self.send_header("Content-Type", mime or "application/octet-stream")
+                    self.send_header("Content-Length", str(length))
+                    self.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
+                    self.send_header("Accept-Ranges", "bytes")
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
+            
+            # No range requested, send entire file
+            with open(fpath, "rb") as f:
+                data = f.read()
+            
+            self.send_response(200)
+            self.send_header("Content-Type", mime or "application/octet-stream")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(data)
+
+        def _json_response(self, obj: dict):
+            self._send(200, "application/json", json.dumps(obj).encode())
+
+        def _send(self, code: int, mime: str, body: bytes):
+            self.send_response(code)
+            self.send_header("Content-Type", mime)
+            self.send_header("Content-Length", len(body))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _read_json(self):
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                return json.loads(self.rfile.read(length))
+            except Exception:
+                self._send(400, "text/plain", b"Bad JSON")
+                return None
+
+    return Handler
 
 
 def run(mqtt_client, display_persistence, usage_stats, font_manager):
     """Start the HTTP server. Runs forever — call from a daemon thread."""
-    global UPLOAD_DIR, _mqtt_client, _display_persistence, _usage_stats, _font_manager
-
-    _mqtt_client         = mqtt_client
-    _display_persistence = display_persistence
-    _usage_stats         = usage_stats
-    _font_manager        = font_manager
-
-    UPLOAD_DIR = QStandardPaths.writableLocation(
+    upload_dir = QStandardPaths.writableLocation(
         QStandardPaths.StandardLocation.AppLocalDataLocation
     )
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    os.makedirs(upload_dir, exist_ok=True)
 
     # Seed static assets the admin UI references via /uploads/
     for qrc_path, fname in [(":/app/res/image/noise_texture.png", "noise_texture.png")]:
-        dest = os.path.join(UPLOAD_DIR, fname)
+        dest = os.path.join(upload_dir, fname)
         if not os.path.exists(dest):
             qf = QFile(qrc_path)
             if qf.open(QFile.OpenModeFlag.ReadOnly):
@@ -437,8 +532,9 @@ def run(mqtt_client, display_persistence, usage_stats, font_manager):
                 qf.close()
 
     local_ip = _get_local_ip()
-    print(f"[admin-web] http://0.0.0.0:{PORT}  (LAN: http://{local_ip}:{PORT})")
+    logger.info(f"[admin-web] http://0.0.0.0:{PORT}  (LAN: http://{local_ip}:{PORT})")
 
-    http.server.HTTPServer.allow_reuse_address = True
-    with http.server.HTTPServer(("0.0.0.0", PORT), Handler) as httpd:
+    Handler = create_handler(upload_dir, mqtt_client, display_persistence, usage_stats, font_manager)
+    http.server.ThreadingHTTPServer.allow_reuse_address = True
+    with http.server.ThreadingHTTPServer(("0.0.0.0", PORT), Handler) as httpd:
         httpd.serve_forever()

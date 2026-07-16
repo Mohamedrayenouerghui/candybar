@@ -10,7 +10,32 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <style>
+    @font-face{font-family:'Barriecito';src:url('/fonts/Barriecito-Regular.ttf') format('truetype')}
+    @font-face{font-family:'DT Getai Grotesk Display Black';src:url('/fonts/DTGetaiGroteskDisplay-Black.otf') format('opentype')}
+    @font-face{font-family:'Gluten';src:url('/fonts/Gluten-Regular.ttf') format('truetype')}
+    @font-face{font-family:'LC Mogi';src:url('/fonts/LCMogi-A.otf') format('opentype')}
+    @font-face{font-family:'Manosque';src:url('/fonts/Manosque-Regular.otf') format('opentype')}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    .typography-group {
+      background: rgba(255,255,255,.02);
+      border: 1px solid rgba(255,255,255,.05);
+      border-radius: var(--rc);
+      padding: 14px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .typo-element-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--chrome);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      padding-bottom: 6px;
+      margin-bottom: 2px;
+    }
     :root{
       --bg:#0a0c0e; --s1:rgba(255,255,255,.045); --s2:rgba(255,255,255,.085);
       --bd:rgba(255,255,255,.10);
@@ -233,6 +258,25 @@
     .font-item{display:flex;align-items:center;justify-content:space-between;gap:8px;
       padding:10px 12px;background:var(--s2);border:1px solid var(--bd);
       border-radius:var(--rc);margin-bottom:6px}
+    /* ── simple size rows (Text size card) ── */
+    .size-row{display:flex;flex-direction:column;gap:8px}
+    .size-row-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+    .size-row-label{font-size:14px;font-weight:600;color:var(--t1)}
+    .size-row-val{font-size:15px;font-weight:800;color:var(--chrome);
+      font-family:'DM Mono',monospace;background:var(--s2);border:1px solid var(--bd);
+      padding:3px 11px;border-radius:99px;min-width:56px;text-align:center;flex:none}
+    /* ── font style picker (big preview tiles, template-style) ── */
+    .font-target-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    .font-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .font-card{border-radius:var(--rc);border:2px solid var(--bd);background:var(--s1);
+      padding:16px 8px 11px;text-align:center;cursor:pointer;
+      transition:border-color .2s,transform var(--fast),opacity var(--fast),background .2s}
+    .font-card:active{transform:scale(.94);opacity:.70}
+    .font-card.on{border-color:var(--acc);background:var(--s2)}
+    .font-card-preview{font-size:32px;font-weight:600;line-height:1.15;margin-bottom:9px;
+      color:var(--t1);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+    .font-card-name{font-size:11px;font-weight:700;color:var(--t2);letter-spacing:.01em}
+    .font-card.on .font-card-name{color:var(--t1)}
     /* ── bg category switch ── */
     .bg-tabs{display:flex;gap:6px;background:var(--s2);border-radius:var(--rc);padding:4px}
     .bg-tab{flex:1;padding:9px 0;border:none;border-radius:var(--rc);font-size:13px;
@@ -297,7 +341,7 @@
         <button class="step-btn" onclick="adj(1)">＋</button>
       </div>
       <div style="font-size:13px;color:var(--t2);text-align:center;font-weight:500">
-        Category: <span id="rc_code">A</span> — <span id="rc_name">Category A</span>
+        Category: <span id="rc_code" style="display:none">A</span><span id="rc_name">Category A</span>
       </div>
     </div>
     <div class="card">
@@ -326,18 +370,21 @@
     <div class="card open">
       <button class="acc-head" onclick="toggleCard(this)">
         <span class="acc-ic">🏷</span>
-        <span class="acc-t"><b>Category</b><small id="cat_summary">Category A · A</small></span>
+        <span class="acc-t"><b>Category</b><small id="cat_summary">Category A</small></span>
         <span class="acc-chev">⌄</span>
       </button>
       <div class="acc-body" style="gap:10px">
         <div class="slider-row" style="gap:4px">
-          <span class="slider-lbl">Short code</span>
-          <input type="text" id="cat_id" placeholder="A" maxlength="10"/>
+          <span class="slider-lbl">Choose existing category</span>
+          <select id="cat_select" onchange="onCategorySelect(this.value)">
+            <option value="">-- Select or type new --</option>
+          </select>
         </div>
         <div class="slider-row" style="gap:4px">
           <span class="slider-lbl">Display name</span>
           <input type="text" id="cat_name" placeholder="Category A"/>
         </div>
+        <input type="hidden" id="cat_id" value="A"/>
         <button class="gi save-btn" onclick="saveCategory()">Save category</button>
       </div>
     </div>
@@ -479,19 +526,11 @@
     <div class="card">
       <button class="acc-head" onclick="toggleCard(this)">
         <span class="acc-ic">▦</span>
-        <span class="acc-t"><b>Layout</b><small id="layout_summary">Classic</small></span>
+        <span class="acc-t"><b>Layout</b><small id="layout_summary">Centered</small></span>
         <span class="acc-chev">⌄</span>
       </button>
       <div class="acc-body">
         <div class="lay-grid">
-          <div class="lay-thumb on" id="lay_Classic" onclick="setLayout('Classic')">
-            <svg width="48" height="30" viewBox="0 0 48 30" fill="none">
-              <rect width="48" height="30" rx="3" fill="rgba(255,255,255,.05)"/>
-              <rect x="4" y="4" width="40" height="5" rx="2" fill="rgba(255,255,255,.18)"/>
-              <rect x="14" y="11" width="20" height="10" rx="2" fill="rgba(255,255,255,.30)"/>
-              <rect x="4" y="23" width="40" height="4" rx="2" fill="rgba(255,255,255,.12)"/>
-            </svg><span>Classic</span>
-          </div>
           <div class="lay-thumb" id="lay_Split" onclick="setLayout('Split')">
             <svg width="48" height="30" viewBox="0 0 48 30" fill="none">
               <rect width="48" height="30" rx="3" fill="rgba(255,255,255,.05)"/>
@@ -502,7 +541,7 @@
               <rect x="30" y="16" width="8" height="3" rx="1" fill="rgba(255,255,255,.09)"/>
             </svg><span>Split</span>
           </div>
-          <div class="lay-thumb" id="lay_Centered" onclick="setLayout('Centered')">
+          <div class="lay-thumb on" id="lay_Centered" onclick="setLayout('Centered')">
             <svg width="48" height="30" viewBox="0 0 48 30" fill="none">
               <rect width="48" height="30" rx="3" fill="rgba(255,255,255,.05)"/>
               <rect x="20" y="3" width="8" height="8" rx="2" fill="rgba(255,255,255,.18)"/>
@@ -535,39 +574,7 @@
       </div>
     </div>
 
-    <!-- Animated Backgrounds -->
-    <div class="card">
-      <button class="acc-head" onclick="toggleCard(this)">
-        <span class="acc-ic">🎬</span>
-        <span class="acc-t"><b>Animated Backgrounds</b><small>Choose a looping video background</small></span>
-        <span class="acc-chev">⌄</span>
-      </button>
-      <div class="acc-body" style="gap:12px">
-        <div class="bg-tabs" style="margin-bottom:8px">
-          <button class="bg-tab on" id="bg_v_t_pro" onclick="bgVideoTab('pro')">💼 Professional</button>
-          <button class="bg-tab" id="bg_v_t_ff" onclick="bgVideoTab('ff')">🍔 Fast Food</button>
-        </div>
-        <div class="bg-grid" id="bg_video_grid_pro"></div>
-        <div class="bg-grid hide" id="bg_video_grid_ff"></div>
-      </div>
-    </div>
 
-    <!-- Static Backgrounds -->
-    <div class="card">
-      <button class="acc-head" onclick="toggleCard(this)">
-        <span class="acc-ic">🖼</span>
-        <span class="acc-t"><b>Static Backgrounds</b><small>Choose an image background</small></span>
-        <span class="acc-chev">⌄</span>
-      </button>
-      <div class="acc-body" style="gap:12px">
-        <div class="bg-tabs">
-          <button class="bg-tab on" id="bg_t_pro" onclick="bgTab('pro')">💼 Professional</button>
-          <button class="bg-tab" id="bg_t_ff" onclick="bgTab('ff')">🍔 Fast Food</button>
-        </div>
-        <div class="bg-grid" id="bg_grid_pro"></div>
-        <div class="bg-grid hide" id="bg_grid_ff"></div>
-      </div>
-    </div>
 
     <!-- Upload & Adjust Background -->
     <div class="card">
@@ -652,121 +659,99 @@
           <button id="logo_visible_btn" class="gi on" style="flex:none;padding:12px 22px"
                   onclick="toggleLogoVisibility()">Visible</button>
         </div>
+        <div class="slider-row">
+          <div class="slider-header">
+            <span class="slider-lbl">Logo size</span>
+            <span class="slider-val" id="ls_val">48px</span>
+          </div>
+          <input type="range" id="ls_slider" min="24" max="120" step="1" value="48"
+                 oninput="onLsSlider(this.value)"/>
+        </div>
       </div>
     </div>
 
-    <!-- Font size slider -->
+    <!-- Text size -->
     <div class="card">
       <button class="acc-head" onclick="toggleCard(this)">
-        <span class="acc-ic">Aa</span>
-        <span class="acc-t"><b>Typography &amp; size</b><small>Font family and size for every element</small></span>
+        <span class="acc-ic">📏</span>
+        <span class="acc-t"><b>Text size</b><small id="size_summary">Number 96px</small></span>
         <span class="acc-chev">⌄</span>
       </button>
-      <div class="acc-body" style="gap:10px">
+      <div class="acc-body" style="gap:18px">
+        <div class="hint-txt">One slider per element — drag to see it change live in the preview above.</div>
 
-      <div class="slider-row">
-        <div class="slider-header">
-          <span class="slider-lbl">Global number size</span>
-          <span class="slider-val" id="fs_val">96px</span>
+        <div class="size-row">
+          <div class="size-row-top">
+            <span class="size-row-label">🔢 Queue number</span>
+            <span class="size-row-val" id="num_fs_val">96px</span>
+          </div>
+          <input type="range" id="num_fs_slider" min="8" max="240" step="1" value="96"
+                 oninput="onTextSizeSlider('numberFontSize', this.value, 'num_fs_val', 'prev_num', 'fontSize')"/>
         </div>
-        <input type="range" id="fs_slider" min="48" max="200" step="1" value="96"
-               oninput="onFsSlider(this.value)"/>
-        <div class="hint-txt">Scales the queue number as a whole. Use the overrides below to fine-tune individual elements.</div>
-      </div>
 
-      <div class="sep" style="margin:2px 0 -2px">Individual overrides</div>
-
-      <div class="slider-row">
-        <div class="slider-header">
-          <span class="slider-lbl">Number size</span>
-          <span class="slider-val" id="num_fs_val">96px</span>
+        <div class="size-row">
+          <div class="size-row-top">
+            <span class="size-row-label">🏷 Category badge</span>
+            <span class="size-row-val" id="cat_fs_val">34px</span>
+          </div>
+          <input type="range" id="cat_fs_slider" min="8" max="240" step="1" value="34"
+                 oninput="onTextSizeSlider('categoryFontSize', this.value, 'cat_fs_val', 'prev_cat', 'fontSize')"/>
         </div>
-        <input type="range" id="num_fs_slider" min="8" max="240" step="1" value="96"
-               oninput="onTextSizeSlider('numberFontSize', this.value, 'num_fs_val', 'prev_num', 'fontSize')"/>
-      </div>
 
-      <div class="slider-row">
-        <div class="slider-header">
-          <span class="slider-lbl">Category size</span>
-          <span class="slider-val" id="cat_fs_val">34px</span>
+        <div class="size-row">
+          <div class="size-row-top">
+            <span class="size-row-label">🏢 Facility name</span>
+            <span class="size-row-val" id="fac_fs_val">24px</span>
+          </div>
+          <input type="range" id="fac_fs_slider" min="8" max="240" step="1" value="24"
+                 oninput="onTextSizeSlider('facilityFontSize', this.value, 'fac_fs_val', 'prev_fac', 'fontSize')"/>
         </div>
-        <input type="range" id="cat_fs_slider" min="8" max="240" step="1" value="34"
-               oninput="onTextSizeSlider('categoryFontSize', this.value, 'cat_fs_val', 'prev_cat', 'fontSize')"/>
-      </div>
 
-      <div class="slider-row">
-        <div class="slider-header">
-          <span class="slider-lbl">Facility size</span>
-          <span class="slider-val" id="fac_fs_val">24px</span>
+        <div class="size-row">
+          <div class="size-row-top">
+            <span class="size-row-label">📣 Banner message</span>
+            <span class="size-row-val" id="banner_fs_val">24px</span>
+          </div>
+          <input type="range" id="banner_fs_slider" min="8" max="240" step="1" value="24"
+                 oninput="onTextSizeSlider('bannerFontSize', this.value, 'banner_fs_val', 'prev_fac', 'fontSize')"/>
         </div>
-        <input type="range" id="fac_fs_slider" min="8" max="240" step="1" value="24"
-               oninput="onTextSizeSlider('facilityFontSize', this.value, 'fac_fs_val', 'prev_fac', 'fontSize')"/>
-      </div>
 
-      <div class="slider-row">
-        <div class="slider-header">
-          <span class="slider-lbl">Banner size</span>
-          <span class="slider-val" id="banner_fs_val">24px</span>
-        </div>
-        <input type="range" id="banner_fs_slider" min="8" max="240" step="1" value="24"
-               oninput="onTextSizeSlider('bannerFontSize', this.value, 'banner_fs_val', 'prev_fac', 'fontSize')"/>
-      </div>
-
-      <div class="slider-row">
-        <div class="slider-header">
-          <span class="slider-lbl">Now serving size</span>
-          <span class="slider-val" id="serve_fs_val">16px</span>
-        </div>
-        <input type="range" id="serve_fs_slider" min="8" max="240" step="1" value="16"
-               oninput="onTextSizeSlider('nowServingFontSize', this.value, 'serve_fs_val', 'prev_label', 'fontSize')"/>
-      </div>
-
-      <div class="lbl" style="margin-top:4px;margin-bottom:4px">Font families</div>
-      <div class="slider-row">
-        <div class="slider-header"><span class="slider-lbl">Number font</span></div>
-        <select id="number_font_select" onchange="setFontFor('numberFont', this.value)"></select>
-      </div>
-      <div class="slider-row">
-        <div class="slider-header"><span class="slider-lbl">Category font</span></div>
-        <select id="category_font_select" onchange="setFontFor('categoryFont', this.value)"></select>
-      </div>
-      <div class="slider-row">
-        <div class="slider-header"><span class="slider-lbl">Facility font</span></div>
-        <select id="facility_font_select" onchange="setFontFor('facilityFont', this.value)"></select>
-      </div>
-      <div class="slider-row">
-        <div class="slider-header"><span class="slider-lbl">Banner font</span></div>
-        <select id="banner_font_select" onchange="setFontFor('bannerFont', this.value)"></select>
-      </div>
-      <div class="slider-row">
-        <div class="slider-header"><span class="slider-lbl">Now serving font</span></div>
-        <select id="nowserving_font_select" onchange="setFontFor('nowServingFont', this.value)"></select>
-      </div>
-
-      <!-- Logo size slider -->
-      <div class="slider-row">
-        <div class="slider-header">
-          <span class="slider-lbl">Logo size</span>
-          <span class="slider-val" id="ls_val">48px</span>
-        </div>
-        <input type="range" id="ls_slider" min="24" max="120" step="1" value="48"
-               oninput="onLsSlider(this.value)"/>
-      </div>
-
-      <div class="lbl" style="margin-top:4px;margin-bottom:4px">Number font preset</div>
-      <div id="font_list">
-        <div class="font-item">
-          <span style="font-size:13px">Default — DM Mono</span>
-          <span style="font-family:monospace;font-size:14px;color:var(--t1)">042</span>
-          <button class="gi" style="flex:none;padding:8px 14px;font-size:11px"
-                  onclick="setFont('DM Mono')">Use</button>
+        <div class="size-row">
+          <div class="size-row-top">
+            <span class="size-row-label">🔔 "Now serving" label</span>
+            <span class="size-row-val" id="serve_fs_val">16px</span>
+          </div>
+          <input type="range" id="serve_fs_slider" min="8" max="240" step="1" value="16"
+                 oninput="onTextSizeSlider('nowServingFontSize', this.value, 'serve_fs_val', 'prev_label', 'fontSize')"/>
         </div>
       </div>
-      <label class="upload" for="font_file" id="font_upload_area">
-        <div class="upload-hint">📁 Upload font (TTF/OTF, max 2 MB)</div>
-      </label>
-      <input type="file" id="font_file" accept=".ttf,.otf"
-             style="display:none" onchange="uploadFont(this)"/>
+    </div>
+
+    <!-- Font style -->
+    <div class="card">
+      <button class="acc-head" onclick="toggleCard(this)">
+        <span class="acc-ic">🔤</span>
+        <span class="acc-t"><b>Font style</b><small id="font_summary">Number · DM Mono</small></span>
+        <span class="acc-chev">⌄</span>
+      </button>
+      <div class="acc-body" style="gap:12px">
+        <div class="hint-txt">Pick which text to style, then tap a font to preview and apply it — just like the templates above.</div>
+
+        <div class="font-target-grid" id="font_target_grid">
+          <button class="gi on" data-target="numberFont"     onclick="setFontTarget('numberFont')">🔢 Number</button>
+          <button class="gi"    data-target="categoryFont"   onclick="setFontTarget('categoryFont')">🏷 Category</button>
+          <button class="gi"    data-target="facilityFont"   onclick="setFontTarget('facilityFont')">🏢 Facility</button>
+          <button class="gi"    data-target="bannerFont"     onclick="setFontTarget('bannerFont')">📣 Banner</button>
+          <button class="gi"    data-target="nowServingFont" onclick="setFontTarget('nowServingFont')">🔔 Serving</button>
+        </div>
+
+        <div class="font-grid" id="font_grid"></div>
+
+        <label class="upload" for="font_file" id="font_upload_area">
+          <div class="upload-hint">📁 Upload custom font (TTF/OTF, max 2 MB)</div>
+        </label>
+        <input type="file" id="font_file" accept=".ttf,.otf"
+               style="display:none" onchange="uploadFont(this)"/>
       </div>
     </div>
 
@@ -785,6 +770,13 @@
 
 </div><!-- end #app -->
 
+<!-- Sticky apply bar for confirmations -->
+<div class="sticky-apply hide" id="sticky-apply">
+  <div class="sticky-apply-inner">
+    <div class="apply-confirm" id="apply-confirm">Applied ✓</div>
+  </div>
+</div>
+
 <!-- Live updates are sent immediately while editing -->
 
 <!-- Bottom tab bar — thumb-reachable, fixed, always visible on a phone -->
@@ -799,7 +791,7 @@
 /* ════════════════════════════════════════════════════════
    STATE
 ════════════════════════════════════════════════════════ */
-let acc = '#FFB84D', layout = 'Classic', cat = 'A';
+let acc = '#FFB84D', layout = 'Centered', cat = 'A';
 let curBg = 'qrc:/app/res/image/ff_burger_pattern.jpg';
 let muted = false, volStep = 3, ttsOn = true, bannerOn = true;
 let gradOn = false, currentHue = 30, currentSat = 100, currentVal = 100;
@@ -807,10 +799,7 @@ let isDragging = false, pickerCanvas, pickerCtx;
 let _confirmT;
 let logoVisible = true;
 let bgScale = 1.0, bgOffsetX = 0, bgOffsetY = 0;
-// Pending slider values — only sent on Apply press
-let _pendingFs = null, _pendingLs = null;
-// Current display values (from /api/state)
-let _curFs = 96, _curLs = 48;
+let _curLs = 48;
 
 /* ════════════════════════════════════════════════════════
    CATALOG
@@ -866,21 +855,41 @@ const BG_VIDEO = [
 ];
 function videoUrl(id){ return window.location.origin + `/videos/${id}.mp4`; }
 
+/* ── Font style catalog — used by the big-preview font picker ── */
+const FONT_CATALOG = [
+  { family:'DM Mono',                       label:'DM Mono' },
+  { family:'Barriecito',                    label:'Barriecito' },
+  { family:'DT Getai Grotesk Display Black',label:'Getai Grotesk' },
+  { family:'Gluten',                        label:'Gluten' },
+  { family:'LC Mogi',                       label:'LC Mogi' },
+  { family:'Manosque',                      label:'Manosque' },
+  { family:'monospace',                     label:'Monospace' },
+  { family:'sans-serif',                    label:'Sans-serif' },
+  { family:'serif',                         label:'Serif' },
+];
+let CUSTOM_FONTS = []; // populated from /api/fonts — {family, url}
+
+const FONT_TARGET_LABEL = {
+  numberFont:'Number', categoryFont:'Category', facilityFont:'Facility',
+  bannerFont:'Banner', nowServingFont:'Serving'
+};
+const FONT_TARGET_SAMPLE = {
+  numberFont:'042', categoryFont:'CATEGORY', facilityFont:'Facility',
+  bannerFont:'Banner text', nowServingFont:'NOW SERVING'
+};
+let _fontTarget = 'numberFont';
+let _fontValues = {
+  numberFont:'DM Mono', categoryFont:'DM Mono', facilityFont:'DM Mono',
+  bannerFont:'DM Mono', nowServingFont:'DM Mono'
+};
+
 /* ════════════════════════════════════════════════════════
    SLIDER LOGIC — live label update and instant push
 ════════════════════════════════════════════════════════ */
-function onFsSlider(v) {
-  _pendingFs = parseInt(v);
-  document.getElementById('fs_val').textContent = v + 'px';
-  const scale = _pendingFs / 96;
-  document.getElementById('prev_num').style.fontSize = Math.round(42 * scale) + 'px';
-  pub('fontSize', String(_pendingFs));
-  showConfirm();
-}
 function onLsSlider(v) {
-  _pendingLs = parseInt(v);
+  _curLs = parseInt(v);
   document.getElementById('ls_val').textContent = v + 'px';
-  pub('logoSize', String(_pendingLs));
+  debouncedPubLogoSize(_curLs);
   showConfirm();
 }
 function onTextSizeSlider(key, value, labelId, previewId, previewProp) {
@@ -892,16 +901,29 @@ function onTextSizeSlider(key, value, labelId, previewId, previewProp) {
     if (previewProp === 'fontSize') el.style.fontSize = v + 'px';
     if (previewProp === 'fontFamily') el.style.fontFamily = v;
   }
-  pub(key, String(v));
+  debouncedPubTextSize(key, v);
+  updateSizeSummary(key, v);
   showConfirm();
+}
+function updateSizeSummary(key, v) {
+  // Keep the accordion header showing the number size at a glance —
+  // it's the element admins adjust most often.
+  if (key !== 'numberFontSize') return;
+  const s = document.getElementById('size_summary');
+  if (s) s.textContent = 'Number ' + v + 'px';
 }
 
 function showConfirm() {
-  const el = document.getElementById('apply_confirm');
-  if (!el) return;
+  const bar = document.getElementById('sticky-apply');
+  const el = document.getElementById('apply-confirm');
+  if (!el || !bar) return;
+  bar.classList.remove('hide');
   el.classList.add('show');
   clearTimeout(_confirmT);
-  _confirmT = setTimeout(() => el.classList.remove('show'), 2000);
+  _confirmT = setTimeout(() => {
+    el.classList.remove('show');
+    bar.classList.add('hide');
+  }, 2000);
 }
 
 /* ════════════════════════════════════════════════════════
@@ -1269,18 +1291,47 @@ function setAdminLang(lang) {
 /* ════════════════════════════════════════════════════════
    SETTINGS SAVES
 ════════════════════════════════════════════════════════ */
+function onCategorySelect(val) {
+  if (val) {
+    document.getElementById('cat_name').value = val;
+  }
+}
+
 async function saveCategory() {
-  const id   = document.getElementById('cat_id').value.trim();
   const name = document.getElementById('cat_name').value.trim();
-  if (id)   await pub('category', id);
-  if (name) await pub('categoryDisplayName', name);
-  if (id)   { document.getElementById('rc_code').textContent = id; cat = id; }
   if (name) {
+    // Generate valid short code slug for MQTT topic
+    const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 10) || 'a';
+    document.getElementById('cat_id').value = id;
+    
+    await pub('category', id);
+    await pub('categoryDisplayName', name);
+    
+    document.getElementById('rc_code').textContent = id;
+    cat = id;
     document.getElementById('rc_name').textContent = name;
     document.getElementById('prev_cat').textContent = name;
+
+    const select = document.getElementById('cat_select');
+    if (select) {
+      let found = false;
+      for (let i = 0; i < select.options.length; i++) {
+        if (select.options[i].value === name) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+      }
+      select.value = name;
+    }
   }
   const s = document.getElementById('cat_summary');
-  if (s) s.textContent = (name||document.getElementById('cat_name').value||'Category A') + ' · ' + (id||document.getElementById('cat_id').value||'A');
+  if (s) s.textContent = name || 'Category A';
   showConfirm();
 }
 async function saveGeneral() {
@@ -1360,8 +1411,45 @@ function setFontFor(key, family) {
   });
   showConfirm();
 }
-function setFont(f) {
-  setFontFor('numberFont', f);
+
+/* ════════════════════════════════════════════════════════
+   FONT STYLE PICKER — big-preview tiles, same interaction
+   pattern as the "Ready-made templates" grid above
+════════════════════════════════════════════════════════ */
+function allFonts() {
+  return [
+    ...FONT_CATALOG,
+    ...CUSTOM_FONTS.map(f => ({ family: f.family, label: f.family, custom: true }))
+  ];
+}
+function setFontTarget(target) {
+  _fontTarget = target;
+  document.querySelectorAll('#font_target_grid .gi').forEach(b =>
+    b.classList.toggle('on', b.dataset.target === target));
+  buildFontGrid();
+}
+function buildFontGrid() {
+  const grid = document.getElementById('font_grid');
+  if (!grid) return;
+  const sample = FONT_TARGET_SAMPLE[_fontTarget] || 'Aa';
+  const current = _fontValues[_fontTarget] || 'DM Mono';
+  grid.innerHTML = '';
+  allFonts().forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'font-card' + (f.family === current ? ' on' : '');
+    card.onclick = () => selectFontCard(f.family);
+    card.innerHTML = `
+      <div class="font-card-preview" style="font-family:'${f.family}'">${sample}</div>
+      <div class="font-card-name">${f.label}${f.custom ? ' ✦' : ''}</div>`;
+    grid.appendChild(card);
+  });
+  const s = document.getElementById('font_summary');
+  if (s) s.textContent = (FONT_TARGET_LABEL[_fontTarget] || _fontTarget) + ' · ' + current;
+}
+function selectFontCard(family) {
+  _fontValues[_fontTarget] = family;
+  setFontFor(_fontTarget, family);
+  buildFontGrid();
 }
 
 /* ════════════════════════════════════════════════════════
@@ -1444,15 +1532,14 @@ function selectBgVideo(v) {
   previewEl.style.backgroundImage = 'none';
   previewEl.innerHTML = `<video src="${relUrl}" autoplay loop muted playsinline style="width:100%; height:100%; object-fit:cover; display:block;"></video>`;
   
-  Promise.all([
-    pub('backgroundType', 'video'),
-    pub('backgroundImage', ''),  // Clear image to avoid conflicts
-    pub('backgroundVideoSource', vidUrl),
-    pub('backgroundScale', '1.0'),
-    pub('backgroundOffsetX', '0'),
-    pub('backgroundOffsetY', '0'),
-  ]);
-  showConfirm();
+  pubBatch([
+    ['backgroundType', 'video'],
+    ['backgroundImage', ''],  // Clear image to avoid conflicts
+    ['backgroundVideoSource', vidUrl],
+    ['backgroundScale', '1.0'],
+    ['backgroundOffsetX', '0'],
+    ['backgroundOffsetY', '0'],
+  ]).then(showConfirm);
 }
 function bgTypeTab(type) {
   const staticSection = document.getElementById('bg_static_section');
@@ -1494,19 +1581,19 @@ function onBgZoom(v) {
   bgScale = Math.max(0.5, Math.min(2.0, parseFloat(v) / 100));
   document.getElementById('bg_zoom_val').textContent = Math.round(bgScale * 100) + '%';
   updateBgPreviewTransform();
-  pub('backgroundScale', String(bgScale));
+  debouncedPubBgScale(bgScale);
 }
 function onBgMoveX(v) {
   bgOffsetX = parseInt(v) || 0;
   document.getElementById('bg_move_x_val').textContent = bgOffsetX + 'px';
   updateBgPreviewTransform();
-  pub('backgroundOffsetX', String(bgOffsetX));
+  debouncedPubBgOffsetX(bgOffsetX);
 }
 function onBgMoveY(v) {
   bgOffsetY = parseInt(v) || 0;
   document.getElementById('bg_move_y_val').textContent = bgOffsetY + 'px';
   updateBgPreviewTransform();
-  pub('backgroundOffsetY', String(bgOffsetY));
+  debouncedPubBgOffsetY(bgOffsetY);
 }
 function setBgFitMode(mode) {
   pub('backgroundFitMode', mode);
@@ -1520,10 +1607,10 @@ function resetBgAdjust() {
   document.getElementById('bg_move_x_val').textContent = '0px';
   document.getElementById('bg_move_y_val').textContent = '0px';
   updateBgPreviewTransform();
-  Promise.all([
-    pub('backgroundScale', '1.0'),
-    pub('backgroundOffsetX', '0'),
-    pub('backgroundOffsetY', '0')
+  pubBatch([
+    ['backgroundScale', '1.0'],
+    ['backgroundOffsetX', '0'],
+    ['backgroundOffsetY', '0']
   ]);
 }
 function selectBg(bg) {
@@ -1545,43 +1632,41 @@ function selectBg(bg) {
   document.getElementById('bg_move_x_val').textContent = '0px';
   document.getElementById('bg_move_y_val').textContent = '0px';
   updateBgPreviewTransform();
-  Promise.all([
-    pub('backgroundType', 'image'),
-    pub('backgroundImage', qrc(bg.id)),
-    pub('backgroundOrientation', bg.ori),
-    pub('backgroundFitMode', bg.fit || 'auto'),
-    pub('backgroundScale', '1.0'),
-    pub('backgroundOffsetX', '0'),
-    pub('backgroundOffsetY', '0')
-  ]);
-  showConfirm();
+  pubBatch([
+    ['backgroundType', 'image'],
+    ['backgroundImage', qrc(bg.id)],
+    ['backgroundOrientation', bg.ori],
+    ['backgroundFitMode', bg.fit || 'auto'],
+    ['backgroundScale', '1.0'],
+    ['backgroundOffsetX', '0'],
+    ['backgroundOffsetY', '0']
+  ]).then(showConfirm);
 }
 function highlightBg(qrcUrl) {
-  document.querySelectorAll('.bg-btn').forEach(b => b.classList.remove('on'));
-  for (const c of ['pro','ff']) {
-    for (const bg of BG[c]) {
-      if (qrc(bg.id) === qrcUrl) {
-        const b = document.getElementById('bgb_' + bg.id);
-        if (b) b.classList.add('on');
-        document.getElementById('bg_sel_lbl').textContent = bg.label;
-        const bgs = document.getElementById('bg_summary'); if (bgs) bgs.textContent = bg.label;
-        bgTab(c); return;
-      }
-    }
-  }
+  // Do nothing since we removed the background selection grids
 }
 function setPrevBg(qrcUrl) {
   const el = document.getElementById('prev_bg');
+  if (!el) return;
+  // Check if it's a template qrc URL, get its thumbnail
   for (const c of ['pro','ff']) {
     for (const bg of BG[c]) {
       if (qrc(bg.id) === qrcUrl) {
         el.style.backgroundImage = `url('${thumb(bg.id)}')`;
+        el.style.background = '';
         return;
       }
     }
   }
-  if (qrcUrl && (qrcUrl.startsWith('/uploads/') || qrcUrl.startsWith('http')))
+  // Check if it's an uploaded or external URL
+  if (qrcUrl && (qrcUrl.startsWith('/uploads/') || qrcUrl.startsWith('http'))) {
     el.style.backgroundImage = `url('${qrcUrl}')`;
+    el.style.background = '';
+    return;
+  }
+  // Default fallback
+  el.style.backgroundImage = '';
+  el.style.background = 'linear-gradient(135deg, #1e1e1e, #2d2d2d)';
 }
 async function applyTpl(t) {
   document.querySelectorAll('.tpl-card').forEach(c => c.classList.remove('on'));
@@ -1608,11 +1693,11 @@ async function applyTpl(t) {
     document.getElementById('bg_sel_lbl').textContent = 'Ready for custom upload';
     const bgs = document.getElementById('bg_summary'); if (bgs) bgs.textContent = 'Custom - ready to upload';
     
-    await Promise.all([
-      pub('backgroundType', 'image'),
-      pub('backgroundImage', ''),
-      pub('accentColor', t.acc),
-      pub('numberFont', 'DM Mono'),
+    await pubBatch([
+      ['backgroundType', 'image'],
+      ['backgroundImage', ''],
+      ['accentColor', t.acc],
+      ['numberFont', 'DM Mono'],
     ]);
   } else if (t.video && t.video.length > 0) {
     // Video template
@@ -1624,17 +1709,17 @@ async function applyTpl(t) {
     document.getElementById('bg_sel_lbl').textContent = t.label + ' (animated)';
     const bgs = document.getElementById('bg_summary'); if (bgs) bgs.textContent = t.label;
     
-    await Promise.all([
-      pub('backgroundType', 'video'),
-      pub('backgroundImage', ''),  // Clear image to avoid conflicts
-      pub('backgroundVideoSource', vidUrl),
-      pub('backgroundOrientation', t.ori),
-      pub('backgroundFitMode', t.fit || 'auto'),
-      pub('backgroundScale', '1.0'),
-      pub('backgroundOffsetX', '0'),
-      pub('backgroundOffsetY', '0'),
-      pub('accentColor', t.acc),
-      pub('numberFont', 'DM Mono'),
+    await pubBatch([
+      ['backgroundType', 'video'],
+      ['backgroundImage', ''],  // Clear image to avoid conflicts
+      ['backgroundVideoSource', vidUrl],
+      ['backgroundOrientation', t.ori],
+      ['backgroundFitMode', t.fit || 'auto'],
+      ['backgroundScale', '1.0'],
+      ['backgroundOffsetX', '0'],
+      ['backgroundOffsetY', '0'],
+      ['accentColor', t.acc],
+      ['numberFont', 'DM Mono'],
     ]);
   } else {
     // Image template
@@ -1644,16 +1729,16 @@ async function applyTpl(t) {
     document.getElementById('bg_sel_lbl').textContent = t.label;
     const bgs = document.getElementById('bg_summary'); if (bgs) bgs.textContent = t.label;
     
-    await Promise.all([
-      pub('backgroundType', 'image'),
-      pub('backgroundImage', qrc(t.bg)),
-      pub('backgroundOrientation', t.ori),
-      pub('backgroundFitMode', t.fit || 'auto'),
-      pub('backgroundScale', '1.0'),
-      pub('backgroundOffsetX', '0'),
-      pub('backgroundOffsetY', '0'),
-      pub('accentColor', t.acc),
-      pub('numberFont', 'DM Mono'),
+    await pubBatch([
+      ['backgroundType', 'image'],
+      ['backgroundImage', qrc(t.bg)],
+      ['backgroundOrientation', t.ori],
+      ['backgroundFitMode', t.fit || 'auto'],
+      ['backgroundScale', '1.0'],
+      ['backgroundOffsetX', '0'],
+      ['backgroundOffsetY', '0'],
+      ['accentColor', t.acc],
+      ['numberFont', 'DM Mono'],
     ]);
   }
   showConfirm();
@@ -1669,17 +1754,19 @@ function removeBg() {
   document.getElementById('bg_move_x_val').textContent = '0px';
   document.getElementById('bg_move_y_val').textContent = '0px';
   updateBgPreviewTransform();
-  Promise.all([
-    pub('backgroundType', 'image'),
-    pub('backgroundImage', def),
-    pub('backgroundOrientation', 'portrait'),
-    pub('backgroundFitMode', 'crop'),
-    pub('backgroundScale', '1.0'),
-    pub('backgroundOffsetX', '0'),
-    pub('backgroundOffsetY', '0')
-  ]);
-  setPrevBg(def); highlightBg(def);
-  showConfirm();
+  pubBatch([
+    ['backgroundType', 'image'],
+    ['backgroundImage', def],
+    ['backgroundOrientation', 'portrait'],
+    ['backgroundFitMode', 'crop'],
+    ['backgroundScale', '1.0'],
+    ['backgroundOffsetX', '0'],
+    ['backgroundOffsetY', '0']
+  ]).then(() => {
+    setPrevBg(def);
+    highlightBg(def);
+    showConfirm();
+  });
 }
 
 /* ════════════════════════════════════════════════════════
@@ -1770,12 +1857,12 @@ async function uploadBg(input) {
       document.getElementById('bg_move_x_val').textContent = '0px';
       document.getElementById('bg_move_y_val').textContent = '0px';
       updateBgPreviewTransform();
-      Promise.all([
-        pub('backgroundType', 'image'),
-        pub('backgroundFitMode', 'auto'),
-        pub('backgroundScale', '1.0'),
-        pub('backgroundOffsetX', '0'),
-        pub('backgroundOffsetY', '0')
+      pubBatch([
+        ['backgroundType', 'image'],
+        ['backgroundFitMode', 'auto'],
+        ['backgroundScale', '1.0'],
+        ['backgroundOffsetX', '0'],
+        ['backgroundOffsetY', '0']
       ]);
       document.getElementById('bg_hint').style.display='none';
       const img = document.getElementById('bg_prev');
@@ -1812,71 +1899,16 @@ async function uploadFont(input) {
     if (d.ok) { await loadFonts(); showConfirm(); }
   } catch(e) {}
 }
-function populateFontSelect(id, currentValue) {
-  const sel = document.getElementById(id);
-  if (!sel) return;
-  const base = ['DM Mono', 'monospace', 'sans-serif', 'serif'];
-  const current = currentValue || 'DM Mono';
-  const options = [...new Set([current, ...base])];
-  sel.innerHTML = '';
-  options.forEach(f => {
-    const opt = document.createElement('option');
-    opt.value = f;
-    opt.textContent = f;
-    if (f === current) opt.selected = true;
-    sel.appendChild(opt);
-  });
-}
-function refreshFontSelectors(values = {}) {
-  const mapping = {
-    number_font_select: values.numberFont || 'DM Mono',
-    category_font_select: values.categoryFont || values.numberFont || 'DM Mono',
-    facility_font_select: values.facilityFont || values.numberFont || 'DM Mono',
-    banner_font_select: values.bannerFont || values.numberFont || 'DM Mono',
-    nowserving_font_select: values.nowServingFont || values.numberFont || 'DM Mono'
-  };
-  Object.entries(mapping).forEach(([id, val]) => populateFontSelect(id, val));
-}
 async function loadFonts() {
   try {
     const r = await fetch('/api/fonts');
     const d = await r.json();
     if (!d.ok) return;
-    const container = document.getElementById('font_list');
-    const extras = d.fonts || [];
-    const currentValues = {
-      numberFont: document.getElementById('number_font_select')?.value || 'DM Mono',
-      categoryFont: document.getElementById('category_font_select')?.value || 'DM Mono',
-      facilityFont: document.getElementById('facility_font_select')?.value || 'DM Mono',
-      bannerFont: document.getElementById('banner_font_select')?.value || 'DM Mono',
-      nowServingFont: document.getElementById('nowserving_font_select')?.value || 'DM Mono'
-    };
+    // Only keep fonts that aren't already in the built-in catalog, to avoid duplicates
+    CUSTOM_FONTS = (d.fonts || []).filter(f => !FONT_CATALOG.some(b => b.family === f.family));
     document.getElementById('dyn_fonts').textContent =
-      extras.map(f=>`@font-face{font-family:'${f.family}';src:url('${f.url}')}`).join('\n');
-    container.querySelectorAll('.custom-font-item').forEach(el=>el.remove());
-    refreshFontSelectors(currentValues);
-    extras.forEach(f => {
-      const selIds = ['number_font_select','category_font_select','facility_font_select','banner_font_select','nowserving_font_select'];
-      selIds.forEach(id => {
-        const sel = document.getElementById(id);
-        if (!sel) return;
-        const exists = Array.from(sel.options).some(o => o.value === f.family);
-        if (!exists) {
-          const opt = document.createElement('option');
-          opt.value = f.family;
-          opt.textContent = f.family;
-          sel.appendChild(opt);
-        }
-      });
-      const div = document.createElement('div');
-      div.className = 'font-item custom-font-item';
-      div.innerHTML = `
-        <span style="font-size:13px">${f.family}</span>
-        <span style="font-family:'${f.family}';font-size:14px;color:var(--t1)">042</span>
-        <button class="gi" style="flex:none;padding:8px 14px;font-size:11px"
-          onclick="setFontFor('numberFont', '${f.family}')">Use</button>`;
-      container.appendChild(div);
-    });
+      CUSTOM_FONTS.map(f=>`@font-face{font-family:'${f.family}';src:url('${f.url}')}`).join('\n');
+    buildFontGrid();
   } catch(e) {}
 }
 
@@ -1910,13 +1942,49 @@ function pub(key, value) {
   });
 }
 
+function pubBatch(items) {
+  return fetch('/api/publish_batch', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      items: items.map(([key, value]) => ({topic:'display/'+key, payload:String(value)}))
+    })
+  });
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+// Debounced publish functions for sliders (150ms delay)
+// NOTE: each text-size field gets its OWN debounced function — sharing one
+// timer across keys would let a second slider cancel the first slider's
+// pending publish (they'd stomp on each other's timeout).
+const debouncedPubLogoSize = debounce((v) => pub('logoSize', String(v)), 150);
+const _textSizeDebouncers = {};
+function debouncedPubTextSize(key, v) {
+  if (!_textSizeDebouncers[key]) {
+    _textSizeDebouncers[key] = debounce((val) => pub(key, String(val)), 150);
+  }
+  _textSizeDebouncers[key](v);
+}
+const debouncedPubBgScale = debounce((v) => pub('backgroundScale', String(v)), 150);
+const debouncedPubBgOffsetX = debounce((v) => pub('backgroundOffsetX', String(v)), 150);
+const debouncedPubBgOffsetY = debounce((v) => pub('backgroundOffsetY', String(v)), 150);
+
 /* ════════════════════════════════════════════════════════
    INIT — load state from /api/state and hydrate UI
 ════════════════════════════════════════════════════════ */
 async function init() {
   buildTpls();
-  buildBgGrids();
-  buildBgVideoGrid();
 
   try {
     const r = await fetch('/api/state');
@@ -1929,7 +1997,20 @@ async function init() {
     document.getElementById('cat_name').value       = cname;
     document.getElementById('rc_name').textContent  = cname;
     document.getElementById('prev_cat').textContent = cname;
-    const catS = document.getElementById('cat_summary'); if (catS) catS.textContent = cname + ' · ' + cat;
+    const catS = document.getElementById('cat_summary'); if (catS) catS.textContent = cname;
+
+    const select = document.getElementById('cat_select');
+    if (select) {
+      select.innerHTML = '<option value="">-- Select or type new --</option>';
+      const cats = d.categories || [];
+      cats.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        select.appendChild(opt);
+      });
+      select.value = cname;
+    }
 
     document.getElementById('num_input').value      = parseInt(d.currentNumber)||1;
     document.getElementById('prev_num').textContent = d.currentNumber||'001';
@@ -2018,15 +2099,13 @@ async function init() {
       document.getElementById('grad_btn').classList.toggle('on', gradOn);
     }
 
-    // Font size slider — init from persisted value
-    _curFs = parseInt(d.fontSize)||96;
-    _curFs = Math.max(48, Math.min(200, _curFs));
-    document.getElementById('fs_slider').value       = _curFs;
-    document.getElementById('fs_val').textContent    = _curFs+'px';
-    document.getElementById('prev_num').style.fontSize = Math.round(42*(_curFs/96))+'px';
-    const numberSize = parseInt(d.numberFontSize)||_curFs;
+    // Text size sliders — each element inits straight from its own persisted value
+    const numberSize = parseInt(d.numberFontSize)||96;
     document.getElementById('num_fs_slider').value = numberSize;
     document.getElementById('num_fs_val').textContent = numberSize+'px';
+    document.getElementById('prev_num').style.fontSize = numberSize+'px';
+    updateSizeSummary('numberFontSize', numberSize);
+
     const categorySize = parseInt(d.categoryFontSize)||34;
     document.getElementById('cat_fs_slider').value = categorySize;
     document.getElementById('cat_fs_val').textContent = categorySize+'px';
@@ -2039,22 +2118,20 @@ async function init() {
     const serveSize = parseInt(d.nowServingFontSize)||16;
     document.getElementById('serve_fs_slider').value = serveSize;
     document.getElementById('serve_fs_val').textContent = serveSize+'px';
-    // Apply font family to preview
-    if (d.numberFont) {
-      document.getElementById('prev_num').style.fontFamily = d.numberFont;
-      document.getElementById('prev_cat').style.fontFamily = d.numberFont;
-    }
-    if (d.categoryFont) document.getElementById('prev_cat').style.fontFamily = d.categoryFont;
-    if (d.facilityFont) document.getElementById('prev_fac').style.fontFamily = d.facilityFont;
-    if (d.bannerFont) document.getElementById('prev_fac').style.fontFamily = d.bannerFont;
-    if (d.nowServingFont) document.getElementById('prev_label').style.fontFamily = d.nowServingFont;
-    refreshFontSelectors({
+
+    // Font style — hydrate selected fonts per element and apply to preview
+    _fontValues = {
       numberFont: d.numberFont || 'DM Mono',
       categoryFont: d.categoryFont || d.numberFont || 'DM Mono',
       facilityFont: d.facilityFont || d.numberFont || 'DM Mono',
       bannerFont: d.bannerFont || d.numberFont || 'DM Mono',
       nowServingFont: d.nowServingFont || d.numberFont || 'DM Mono'
-    });
+    };
+    document.getElementById('prev_num').style.fontFamily   = _fontValues.numberFont;
+    document.getElementById('prev_cat').style.fontFamily   = _fontValues.categoryFont;
+    document.getElementById('prev_fac').style.fontFamily   = _fontValues.facilityFont;
+    document.getElementById('prev_label').style.fontFamily = _fontValues.nowServingFont;
+    buildFontGrid();
 
     // Logo size slider — init from persisted value
     _curLs = parseInt(d.logoSize)||48;
@@ -2075,10 +2152,8 @@ async function init() {
   loadFonts();
 
   // Hide loading overlay after everything is initialized
-  setTimeout(() => {
-    const overlay = document.getElementById('loading-overlay');
-    if (overlay) overlay.classList.add('hide');
-  }, 500);
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) overlay.classList.add('hide');
 }
 
 document.addEventListener('DOMContentLoaded', init);

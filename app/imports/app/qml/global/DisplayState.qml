@@ -99,15 +99,15 @@ QtObject {
     property string accentGradientDirection: "top-to-bottom"  // top-to-bottom | corner-to-edge
 
     // ── layout ─────────────────────────────────────────────────────────
-    property string layoutType: "Classic"   // "Classic" | "Split" | "Centered"
+    property string layoutType: "Centered"   // "Split" | "Centered"
 
     // ── typography ─────────────────────────────────────────────────────
     // fontSize: continuous 48–200px, set directly via slider — no preset enum
-    property string numberFont: "DM Mono"
-    property string categoryFont: "DM Mono"
-    property string facilityFont: "DM Mono"
-    property string bannerFont: "DM Mono"
-    property string nowServingFont: "DM Mono"
+    property string numberFont: "DT Getai Grotesk Display Black"
+    property string categoryFont: "LC Mogi"
+    property string facilityFont: "Manosque"
+    property string bannerFont: "Manosque"
+    property string nowServingFont: "Barriecito"
     property string uiFont:     Qt.application.font.family
     property int    fontSize:   96
     property int    numberFontSize: 96
@@ -169,7 +169,7 @@ QtObject {
         currentNumber         = p.load("currentNumber", "001")
         var nu                = p.get_next_up()
         nextUp                = Array.isArray(nu) ? nu : []
-        layoutType            = p.load("layoutType", "Classic")
+        layoutType            = p.load("layoutType", "Centered")
         accentColor           = p.load("accentColor", "#FFB84D")
         accentGradientEnabled    = p.load("accentGradientEnabled", "false") === "true"
         accentGradientDirection  = p.load("accentGradientDirection", "top-to-bottom")
@@ -182,11 +182,11 @@ QtObject {
         logoPosition          = p.load("logoPosition", "top-left")
         bannerEnabled         = p.load("bannerEnabled", "true") !== "false"
         logoVisible           = p.load("logoVisible", "true") !== "false"
-        numberFont            = p.load("numberFont", "DM Mono")
-        categoryFont          = p.load("categoryFont", numberFont)
-        facilityFont          = p.load("facilityFont", numberFont)
-        bannerFont            = p.load("bannerFont", numberFont)
-        nowServingFont        = p.load("nowServingFont", numberFont)
+        numberFont            = p.load("numberFont", "DT Getai Grotesk Display Black")
+        categoryFont          = p.load("categoryFont", "LC Mogi")
+        facilityFont          = p.load("facilityFont", "Manosque")
+        bannerFont            = p.load("bannerFont", "Manosque")
+        nowServingFont        = p.load("nowServingFont", "Barriecito")
         ttsLanguage           = p.load("ttsLanguage", "en")
         ttsEnabled            = p.load("ttsEnabled", "true") !== "false"
         displayLanguage       = p.load("displayLanguage", "en")
