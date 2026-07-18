@@ -185,47 +185,51 @@ class AudioEngine(QObject):
                 logger.warning(f"Error stopping audio playback: {e}")
 
     def _play_announcement(self, number: str):
+        # Set state flags atomically, then release the lock before blocking I/O.
+        # Holding the lock during blocking playback would freeze announceNumber()
+        # and stop() callers (which also need the lock) for the full audio duration.
         with self._lock:
             self._stop_flag = False
             self._playing = True
-            try:
-                files = self._build_sequence(number)
-                if not files:
-                    logger.warning(f"Empty sequence for number '{number}'")
-                    return
-                vol = self.VOLUME_STEPS[self._volume_step]
-                gap = 0.04
-                for rel in files:
-                    if self._stop_flag:
-                        break
-                    full = os.path.join(self._data_dir, rel)
-                    if not os.path.isfile(full):
-                        logger.warning(f"Missing audio atom: {full}")
-                        continue
-                    try:
-                        pygame.mixer.music.load(full)
-                        pygame.mixer.music.set_volume(vol)
-                        pygame.mixer.music.play()
 
-                        is_chime = os.path.basename(full) == "announcement_chime.mp3"
-                        start_time = time.time()
+        try:
+            files = self._build_sequence(number)
+            if not files:
+                logger.warning(f"Empty sequence for number '{number}'")
+                return
+            vol = self.VOLUME_STEPS[self._volume_step]
+            gap = 0.04
+            for rel in files:
+                if self._stop_flag:
+                    break
+                full = os.path.join(self._data_dir, rel)
+                if not os.path.isfile(full):
+                    logger.warning(f"Missing audio atom: {full}")
+                    continue
+                try:
+                    pygame.mixer.music.load(full)
+                    pygame.mixer.music.set_volume(vol)
+                    pygame.mixer.music.play()
 
-                        while pygame.mixer.music.get_busy():
-                            if self._stop_flag:
-                                pygame.mixer.music.stop()
-                                return
-                            # Play the chime file for only 3 seconds max
-                            if is_chime and (time.time() - start_time >= 3.0):
-                                pygame.mixer.music.stop()
-                                break
-                            time.sleep(0.01)
-                        time.sleep(gap)
-                    except Exception as exc:
-                        logger.error(f"Playback error for {rel}: {exc}", exc_info=True)
-            except Exception as e:
-                logger.error(f"Announcement error: {e}", exc_info=True)
-            finally:
-                self._playing = False
+                    is_chime = os.path.basename(full) == "announcement_chime.mp3"
+                    start_time = time.time()
+
+                    while pygame.mixer.music.get_busy():
+                        if self._stop_flag:
+                            pygame.mixer.music.stop()
+                            return
+                        # Play the chime file for only 3 seconds max
+                        if is_chime and (time.time() - start_time >= 3.0):
+                            pygame.mixer.music.stop()
+                            break
+                        time.sleep(0.01)
+                    time.sleep(gap)
+                except Exception as exc:
+                    logger.error(f"Playback error for {rel}: {exc}", exc_info=True)
+        except Exception as e:
+            logger.error(f"Announcement error: {e}", exc_info=True)
+        finally:
+            self._playing = False
 
     def _build_sequence(self, number: str) -> List[str]:
         """Build the ordered list of MP3 relative paths to play: Chime -> Category -> Number."""
